@@ -13,14 +13,12 @@ import {
 import { getAucklandWeekdayIndex } from './domain/schedule';
 import type {
   CockpitMobileTab,
-  Commitment,
-  CommitmentCreate,
   DesktopWorkspaceTab,
-  GridBlock,
-  GridBlockCreate,
   KairosCockpitData,
+  LoadState,
 } from './domain/types';
-import { useKairosSchedule } from './hooks/useKairosSchedule';
+import { useCockpitModals, type CockpitModalControllers } from './hooks/useCockpitModals';
+import { useKairosSchedule, type KairosScheduleActions } from './hooks/useKairosSchedule';
 import { CommitmentModal } from './components/CommitmentModal';
 import { GridBlockModal } from './components/GridBlockModal';
 import { NowNextHero } from './components/NowNextHero';
@@ -38,26 +36,37 @@ const MOBILE_TABS: { id: CockpitMobileTab; label: string; icon: React.ReactNode 
   { id: 'week', label: 'Week', icon: <Grid className="w-4 h-4" /> },
 ];
 
-interface CockpitBodyProps {
+const CockpitStatusBanners: React.FC<{
+  state: LoadState<KairosCockpitData>;
+  mutationError: string | null;
+  onRefresh: () => void;
+}> = ({ state, mutationError, onRefresh }) => (
+  <>
+    {state.status === 'error' && state.isSessionExpired && <SessionExpiredBanner className="mb-4" />}
+    {state.status === 'error' && !state.isSessionExpired && (
+      <AlertBanner
+        variant="error"
+        title="Schedule unavailable"
+        action={<Button variant="secondary" size="xs" onClick={onRefresh}>Retry</Button>}
+        className="mb-4"
+      >
+        {state.message}
+      </AlertBanner>
+    )}
+    {Boolean(mutationError) && state.status === 'ready' && (
+      <AlertBanner variant="error" className="mb-4">{mutationError}</AlertBanner>
+    )}
+  </>
+);
+
+const CockpitBody: React.FC<{
   data: KairosCockpitData;
   desktopTab: DesktopWorkspaceTab;
   mobileTab: CockpitMobileTab;
-  nowMinute: number;
-  weekdayIndex: number;
+  schedule: KairosScheduleActions;
+  modals: CockpitModalControllers;
   onChangeDesktopTab: (tab: DesktopWorkspaceTab) => void;
-  onAddCommitment: () => void;
-  onEditCommitment: (c: Commitment) => void;
-  onDeleteCommitment: (id: number) => void;
-  onSkipGridBlock: (id: number) => void;
-  onRestoreException: (id: number) => void;
-  onAddGridBlock: (dayOfWeek?: number) => void;
-  onEditGridBlock: (b: GridBlock) => void;
-  onToggleGridBlockActive: (b: GridBlock) => void;
-  onDeleteGridBlock: (id: number) => void;
-}
-
-const CockpitBody: React.FC<CockpitBodyProps> = (props) => {
-  const { data, desktopTab, mobileTab, nowMinute, weekdayIndex, onChangeDesktopTab } = props;
+}> = ({ data, desktopTab, mobileTab, schedule, modals, onChangeDesktopTab }) => {
   const heroClass = mobileTab === 'now' ? 'block' : 'hidden lg:block';
   const todayClass = `${mobileTab === 'today' ? 'block' : 'hidden'} ${desktopTab === 'today' ? 'lg:block' : 'lg:hidden'}`;
   const weekClass = `${mobileTab === 'week' ? 'block' : 'hidden'} ${desktopTab === 'week' ? 'lg:block' : 'lg:hidden'}`;
@@ -65,41 +74,31 @@ const CockpitBody: React.FC<CockpitBodyProps> = (props) => {
   return (
     <div className="space-y-5">
       <div className={heroClass}>
-        <NowNextHero nowNext={data.nowNext} onAddCommitment={props.onAddCommitment} />
+        <NowNextHero nowNext={data.nowNext} onAddCommitment={modals.openAddCommitment} />
       </div>
-
       <div className="hidden lg:flex items-center justify-between">
-        <SegmentedControl
-          options={DESKTOP_TABS}
-          value={desktopTab}
-          onChange={onChangeDesktopTab}
-          variant="blue"
-          size="sm"
-          idPrefix="desktop-tab"
-        />
+        <SegmentedControl options={DESKTOP_TABS} value={desktopTab} onChange={onChangeDesktopTab} variant="blue" size="sm" idPrefix="desktop-tab" />
       </div>
-
       <div className={todayClass}>
         <TodayTimeline
           schedule={data.daySchedule}
           exceptions={data.exceptions}
-          nowMinute={nowMinute}
-          onAddCommitment={props.onAddCommitment}
-          onEditCommitment={props.onEditCommitment}
-          onDeleteCommitment={props.onDeleteCommitment}
-          onSkipGridBlock={props.onSkipGridBlock}
-          onRestoreException={props.onRestoreException}
+          nowMinute={schedule.nowMinute}
+          onAddCommitment={modals.openAddCommitment}
+          onEditCommitment={modals.openEditCommitment}
+          onDeleteCommitment={(id) => void schedule.removeCommitment(id)}
+          onSkipGridBlock={(id) => void schedule.skipGridBlockForDate(id)}
+          onRestoreException={(id) => void schedule.restoreException(id)}
         />
       </div>
-
       <div className={weekClass}>
         <WeeklyGridView
           blocks={data.weeklyGrid}
-          initialDayOfWeek={weekdayIndex}
-          onAddBlock={props.onAddGridBlock}
-          onEditBlock={props.onEditGridBlock}
-          onToggleBlockActive={props.onToggleGridBlockActive}
-          onDeleteBlock={props.onDeleteGridBlock}
+          initialDayOfWeek={getAucklandWeekdayIndex(schedule.targetDate)}
+          onAddBlock={modals.openAddGridBlock}
+          onEditBlock={modals.openEditGridBlock}
+          onToggleBlockActive={(block) => void schedule.editGridBlock(block.id, { active: !block.active })}
+          onDeleteBlock={(id) => void schedule.removeGridBlock(id)}
         />
       </div>
     </div>
@@ -108,57 +107,9 @@ const CockpitBody: React.FC<CockpitBodyProps> = (props) => {
 
 export const App: React.FC = () => {
   const schedule = useKairosSchedule();
+  const modals = useCockpitModals(schedule);
   const [desktopTab, setDesktopTab] = useState<DesktopWorkspaceTab>('today');
   const [mobileTab, setMobileTab] = useState<CockpitMobileTab>('now');
-  const [commitmentModalOpen, setCommitmentModalOpen] = useState<boolean>(false);
-  const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null);
-  const [gridModalOpen, setGridModalOpen] = useState<boolean>(false);
-  const [editingBlock, setEditingBlock] = useState<GridBlock | null>(null);
-  const [defaultGridDay, setDefaultGridDay] = useState<number>(() =>
-    getAucklandWeekdayIndex(schedule.targetDate)
-  );
-
-  const openAddCommitment = () => {
-    schedule.clearMutationError();
-    setEditingCommitment(null);
-    setCommitmentModalOpen(true);
-  };
-
-  const openEditCommitment = (item: Commitment) => {
-    schedule.clearMutationError();
-    setEditingCommitment(item);
-    setCommitmentModalOpen(true);
-  };
-
-  const openAddGridBlock = (dayOfWeek?: number) => {
-    schedule.clearMutationError();
-    setDefaultGridDay(dayOfWeek ?? getAucklandWeekdayIndex(schedule.targetDate));
-    setEditingBlock(null);
-    setGridModalOpen(true);
-  };
-
-  const openEditGridBlock = (block: GridBlock) => {
-    schedule.clearMutationError();
-    setDefaultGridDay(block.day_of_week);
-    setEditingBlock(block);
-    setGridModalOpen(true);
-  };
-
-  const handleSaveCommitment = async (payload: CommitmentCreate, editingId: number | null) => {
-    if (editingId !== null) {
-      await schedule.editCommitment(editingId, payload);
-      return;
-    }
-    await schedule.addCommitment(payload);
-  };
-
-  const handleSaveGridBlock = async (payload: GridBlockCreate, editingId: number | null) => {
-    if (editingId !== null) {
-      await schedule.editGridBlock(editingId, payload);
-      return;
-    }
-    await schedule.addGridBlock(payload);
-  };
 
   return (
     <AppShell
@@ -171,95 +122,23 @@ export const App: React.FC = () => {
           isRefreshing={schedule.isRefreshing}
           onRefresh={() => void schedule.refresh()}
           actions={
-            <Button
-              variant="blue"
-              size="sm"
-              data-testid="header-add-btn"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={openAddCommitment}
-              className="min-h-[44px] sm:min-h-[36px]"
-            >
+            <Button variant="blue" size="sm" data-testid="header-add-btn" icon={<Plus className="w-4 h-4" />} onClick={modals.openAddCommitment} className="min-h-[44px] sm:min-h-[36px]">
               Add
             </Button>
           }
         />
       }
       bottomNav={
-        <BottomNav
-          tabs={MOBILE_TABS}
-          activeTab={mobileTab}
-          onChangeTab={(id) => setMobileTab(id as CockpitMobileTab)}
-          variant="blue"
-          hideOnDesktop
-        />
+        <BottomNav tabs={MOBILE_TABS} activeTab={mobileTab} onChangeTab={(id) => setMobileTab(id as CockpitMobileTab)} variant="blue" hideOnDesktop />
       }
     >
-      {schedule.state.status === 'error' && schedule.state.isSessionExpired && (
-        <SessionExpiredBanner className="mb-4" />
-      )}
-
-      {schedule.state.status === 'error' && !schedule.state.isSessionExpired && (
-        <AlertBanner
-          variant="error"
-          title="Schedule unavailable"
-          action={
-            <Button variant="secondary" size="xs" onClick={() => void schedule.refresh()}>
-              Retry
-            </Button>
-          }
-          className="mb-4"
-        >
-          {schedule.state.message}
-        </AlertBanner>
-      )}
-
-      {Boolean(schedule.mutationError) && schedule.state.status === 'ready' && (
-        <AlertBanner variant="error" className="mb-4">
-          {schedule.mutationError}
-        </AlertBanner>
-      )}
-
+      <CockpitStatusBanners state={schedule.state} mutationError={schedule.mutationError} onRefresh={() => void schedule.refresh()} />
       {schedule.state.status === 'loading' && <LoadingState label="Resolving schedule..." variant="blue" />}
-
       {schedule.state.status === 'ready' && (
-        <CockpitBody
-          data={schedule.state.data}
-          desktopTab={desktopTab}
-          mobileTab={mobileTab}
-          nowMinute={schedule.nowMinute}
-          weekdayIndex={getAucklandWeekdayIndex(schedule.targetDate)}
-          onChangeDesktopTab={setDesktopTab}
-          onAddCommitment={openAddCommitment}
-          onEditCommitment={openEditCommitment}
-          onDeleteCommitment={(id) => void schedule.removeCommitment(id)}
-          onSkipGridBlock={(id) => void schedule.skipGridBlockForDate(id)}
-          onRestoreException={(id) => void schedule.restoreException(id)}
-          onAddGridBlock={openAddGridBlock}
-          onEditGridBlock={openEditGridBlock}
-          onToggleGridBlockActive={(block) =>
-            void schedule.editGridBlock(block.id, { active: !block.active })
-          }
-          onDeleteGridBlock={(id) => void schedule.removeGridBlock(id)}
-        />
+        <CockpitBody data={schedule.state.data} desktopTab={desktopTab} mobileTab={mobileTab} schedule={schedule} modals={modals} onChangeDesktopTab={setDesktopTab} />
       )}
-
-      <CommitmentModal
-        isOpen={commitmentModalOpen}
-        defaultDate={schedule.targetDate}
-        editing={editingCommitment}
-        error={schedule.mutationError}
-        onClose={() => setCommitmentModalOpen(false)}
-        onSave={handleSaveCommitment}
-      />
-
-      <GridBlockModal
-        isOpen={gridModalOpen}
-        defaultDayOfWeek={defaultGridDay}
-        editing={editingBlock}
-        error={schedule.mutationError}
-        onClose={() => setGridModalOpen(false)}
-        onSave={handleSaveGridBlock}
-      />
+      <CommitmentModal isOpen={modals.commitmentOpen} defaultDate={schedule.targetDate} editing={modals.editingCommitment} error={schedule.mutationError} onClose={modals.closeCommitment} onSave={modals.saveCommitment} />
+      <GridBlockModal isOpen={modals.gridOpen} defaultDayOfWeek={modals.defaultGridDay} editing={modals.editingBlock} error={schedule.mutationError} onClose={modals.closeGridBlock} onSave={modals.saveGridBlock} />
     </AppShell>
   );
 };

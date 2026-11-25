@@ -45,48 +45,23 @@ export interface KairosScheduleActions {
 }
 
 function resolveErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-  return 'Unexpected schedule error';
+  return error instanceof Error && error.message ? error.message : 'Unexpected schedule error';
 }
 
-export function useKairosSchedule(): KairosScheduleActions {
-  const initialClock = useRef(getAucklandClockSnapshot());
-  const [targetDate, setTargetDate] = useState<string>(initialClock.current.isoDate);
-  const [nowMinute, setNowMinute] = useState<number>(initialClock.current.minuteOfDay);
-  const [state, setState] = useState<LoadState<KairosCockpitData>>({ status: 'loading' });
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [mutationError, setMutationError] = useState<string | null>(null);
+async function fetchCockpitSnapshot(dateStr: string, minute: number): Promise<KairosCockpitData> {
+  const [nowNext, daySchedule, weeklyGrid, exceptions] = await Promise.all([
+    fetchNowNext(dateStr, minute),
+    fetchDaySchedule(dateStr),
+    fetchWeeklyGrid(),
+    fetchExceptions(dateStr),
+  ]);
+  return { nowNext, daySchedule, weeklyGrid, exceptions };
+}
 
-  const loadData = useCallback(async (dateStr: string, showSpinner: boolean) => {
-    const snap = getAucklandClockSnapshot();
-    setNowMinute(snap.minuteOfDay);
-    if (showSpinner) {
-      setIsRefreshing(true);
-    }
-    try {
-      const [nowNext, daySchedule, weeklyGrid, exceptions] = await Promise.all([
-        fetchNowNext(dateStr, snap.minuteOfDay),
-        fetchDaySchedule(dateStr),
-        fetchWeeklyGrid(),
-        fetchExceptions(dateStr),
-      ]);
-      setState({
-        status: 'ready',
-        data: { nowNext, daySchedule, weeklyGrid, exceptions },
-      });
-    } catch (error: unknown) {
-      setState({
-        status: 'error',
-        message: resolveErrorMessage(error),
-        isSessionExpired: isSessionExpiredError(error),
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
-
+function useScheduleTimers(
+  targetDate: string,
+  loadData: (dateStr: string, showSpinner: boolean) => Promise<void>
+): void {
   useEffect(() => {
     void loadData(targetDate, true);
   }, [targetDate, loadData]);
@@ -101,10 +76,35 @@ export function useKairosSchedule(): KairosScheduleActions {
   useAppResumeRefresh(() => {
     void loadData(targetDate, false);
   });
+}
 
-  const refresh = useCallback(async () => {
-    await loadData(targetDate, true);
-  }, [targetDate, loadData]);
+export function useKairosSchedule(): KairosScheduleActions {
+  const initialClock = useRef(getAucklandClockSnapshot());
+  const [targetDate, setTargetDate] = useState<string>(initialClock.current.isoDate);
+  const [nowMinute, setNowMinute] = useState<number>(initialClock.current.minuteOfDay);
+  const [state, setState] = useState<LoadState<KairosCockpitData>>({ status: 'loading' });
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const loadData = useCallback(async (dateStr: string, showSpinner: boolean) => {
+    const snap = getAucklandClockSnapshot();
+    setNowMinute(snap.minuteOfDay);
+    if (showSpinner) setIsRefreshing(true);
+    try {
+      const data = await fetchCockpitSnapshot(dateStr, snap.minuteOfDay);
+      setState({ status: 'ready', data });
+    } catch (error: unknown) {
+      setState({
+        status: 'error',
+        message: resolveErrorMessage(error),
+        isSessionExpired: isSessionExpiredError(error),
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useScheduleTimers(targetDate, loadData);
 
   const runMutation = useCallback(
     async (op: () => Promise<unknown>) => {
@@ -113,8 +113,7 @@ export function useKairosSchedule(): KairosScheduleActions {
         await op();
         await loadData(targetDate, false);
       } catch (error: unknown) {
-        const message = resolveErrorMessage(error);
-        setMutationError(message);
+        setMutationError(resolveErrorMessage(error));
         throw error;
       }
     },
@@ -129,7 +128,7 @@ export function useKairosSchedule(): KairosScheduleActions {
     mutationError,
     clearMutationError: () => setMutationError(null),
     setTargetDate,
-    refresh,
+    refresh: () => loadData(targetDate, true),
     addCommitment: (payload) => runMutation(() => createCommitment(payload)),
     editCommitment: (id, payload) => runMutation(() => updateCommitment(id, payload)),
     removeCommitment: (id) => runMutation(() => deleteCommitment(id)),
@@ -137,13 +136,7 @@ export function useKairosSchedule(): KairosScheduleActions {
     editGridBlock: (id, payload) => runMutation(() => updateGridBlock(id, payload)),
     removeGridBlock: (id) => runMutation(() => deleteGridBlock(id)),
     skipGridBlockForDate: (gridBlockId) =>
-      runMutation(() =>
-        upsertException({
-          grid_block_id: gridBlockId,
-          target_date: targetDate,
-          skipped: true,
-        })
-      ),
+      runMutation(() => upsertException({ grid_block_id: gridBlockId, target_date: targetDate, skipped: true })),
     restoreException: (exceptionId) => runMutation(() => deleteException(exceptionId)),
   };
 }
