@@ -166,6 +166,8 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
     try {
       await onSave(result.payload, editing?.id ?? null);
       onClose();
+    } catch {
+      /* Handled via mutationError state in useKairosSchedule */
     } finally {
       setSubmitting(false);
     }

@@ -152,6 +152,8 @@ export const GridBlockModal: React.FC<GridBlockModalProps> = ({
     try {
       await onSave(result.payload, editing?.id ?? null);
       onClose();
+    } catch {
+      /* Handled via mutationError state in useKairosSchedule */
     } finally {
       setSubmitting(false);
     }
