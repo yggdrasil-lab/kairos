@@ -4,12 +4,18 @@ import type {
   CommitmentCreate,
   CommitmentUpdate,
   DaySchedule,
+  FrictionNote,
+  FrictionNoteCreate,
   GridBlock,
   GridBlockCreate,
   GridBlockUpdate,
   GridException,
   GridExceptionUpsert,
+  HabitCue,
+  HabitCueCreate,
+  HabitCueUpdate,
   NowNextState,
+  WeeklyReflection,
 } from '../domain/types';
 
 export { isSessionExpiredError, SessionExpiredError };
@@ -164,4 +170,77 @@ export function updateCommitment(
 
 export function deleteCommitment(commitmentId: number): Promise<void> {
   return requestJson<void>(`/commitments/${commitmentId}`, { method: 'DELETE' });
+}
+
+export interface FetchCuesQuery {
+  active_only?: boolean;
+  grid_block_id?: number;
+  zone_chain?: string;
+}
+
+export function fetchCues(query: FetchCuesQuery = {}): Promise<HabitCue[]> {
+  const params = new URLSearchParams();
+  if (query.active_only !== undefined) params.set('active_only', String(query.active_only));
+  if (query.grid_block_id !== undefined) params.set('grid_block_id', String(query.grid_block_id));
+  if (query.zone_chain) params.set('zone_chain', query.zone_chain);
+  const qs = params.toString();
+  return requestJson<HabitCue[]>(qs ? `/cues?${qs}` : '/cues');
+}
+
+export function createCue(payload: HabitCueCreate): Promise<HabitCue> {
+  return requestJson<HabitCue>('/cues', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateCue(cueId: number, payload: HabitCueUpdate): Promise<HabitCue> {
+  return requestJson<HabitCue>(`/cues/${cueId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteCue(cueId: number): Promise<void> {
+  return requestJson<void>(`/cues/${cueId}`, { method: 'DELETE' });
+}
+
+export interface FetchFrictionNotesQuery {
+  start_date?: string;
+  end_date?: string;
+  habit_cue_id?: number;
+  grid_block_id?: number;
+  limit?: number;
+}
+
+export function fetchFrictionNotes(query: FetchFrictionNotesQuery = {}): Promise<FrictionNote[]> {
+  const params = new URLSearchParams();
+  if (query.start_date) params.set('start_date', query.start_date);
+  if (query.end_date) params.set('end_date', query.end_date);
+  if (query.habit_cue_id !== undefined) params.set('habit_cue_id', String(query.habit_cue_id));
+  if (query.grid_block_id !== undefined) params.set('grid_block_id', String(query.grid_block_id));
+  if (query.limit !== undefined) params.set('limit', String(query.limit));
+  const qs = params.toString();
+  return requestJson<FrictionNote[]>(qs ? `/friction-notes?${qs}` : '/friction-notes');
+}
+
+export function createFrictionNote(payload: FrictionNoteCreate): Promise<FrictionNote> {
+  return requestJson<FrictionNote>('/friction-notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteFrictionNote(noteId: number): Promise<void> {
+  return requestJson<void>(`/friction-notes/${noteId}`, { method: 'DELETE' });
+}
+
+export function fetchWeeklyReflection(weekStart?: string): Promise<WeeklyReflection> {
+  const params = new URLSearchParams();
+  if (weekStart) params.set('week_start', weekStart);
+  const qs = params.toString();
+  return requestJson<WeeklyReflection>(qs ? `/friction-notes/reflection?${qs}` : '/friction-notes/reflection');
 }

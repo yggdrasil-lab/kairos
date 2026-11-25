@@ -4,9 +4,17 @@ export type CommitmentSource = 'manual' | 'iris' | 'kratos';
 
 export type SliceKind = 'grid_block' | 'commitment';
 
-export type CockpitMobileTab = 'now' | 'today' | 'week';
+export type CockpitMobileTab = 'now' | 'today' | 'week' | 'cues';
 
-export type DesktopWorkspaceTab = 'today' | 'week';
+export type DesktopWorkspaceTab = 'today' | 'week' | 'cues';
+
+export type CuesSubTab = 'catalog' | 'reflection';
+
+export type FrictionTag =
+  | 'tired'
+  | 'trigger_missed'
+  | 'schedule_overrun'
+  | 'environment_missing';
 
 export interface GridBlock {
   id: number;
@@ -138,6 +146,73 @@ export interface KairosCockpitData {
   daySchedule: DaySchedule;
   weeklyGrid: GridBlock[];
   exceptions: GridException[];
+}
+
+export interface FrictionNote {
+  id: number;
+  target_date: string;
+  tag: FrictionTag;
+  note: string;
+  habit_cue_id: number | null;
+  grid_block_id: number | null;
+  cue_title: string | null;
+  block_title: string | null;
+  created_at: string;
+}
+
+export interface FrictionNoteCreate {
+  target_date: string;
+  tag: FrictionTag;
+  note: string;
+  habit_cue_id?: number | null;
+  grid_block_id?: number | null;
+}
+
+export interface HabitCue {
+  id: number;
+  title: string;
+  zone_chain: string;
+  chain_order: number;
+  passive_rule: string | null;
+  active: boolean;
+  notes: string | null;
+  grid_block_ids: number[];
+  recent_friction: FrictionNote[];
+}
+
+export interface HabitCueCreate {
+  title: string;
+  zone_chain: string;
+  chain_order?: number;
+  passive_rule?: string | null;
+  active?: boolean;
+  notes?: string | null;
+  grid_block_ids?: number[];
+}
+
+export type HabitCueUpdate = Partial<HabitCueCreate>;
+
+export interface WeeklyReflectionByTag {
+  tag: FrictionTag;
+  count: number;
+  notes: FrictionNote[];
+}
+
+export interface WeeklyReflectionByCue {
+  habit_cue_id: number;
+  cue_title: string;
+  zone_chain: string;
+  count: number;
+  notes: FrictionNote[];
+}
+
+export interface WeeklyReflection {
+  week_start: string;
+  week_end: string;
+  total_notes: number;
+  by_tag: WeeklyReflectionByTag[];
+  by_cue: WeeklyReflectionByCue[];
+  unlinked_notes: FrictionNote[];
 }
 
 export type LoadState<T> =
