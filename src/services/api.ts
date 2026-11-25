@@ -15,6 +15,7 @@ import type {
   HabitCueCreate,
   HabitCueUpdate,
   NowNextState,
+  PassiveSignalsResponse,
   PushSubscriptionPayload,
   PushSubscriptionResponse,
   PushUnsubscribeResponse,
@@ -249,6 +250,11 @@ export function fetchWeeklyReflection(weekStart?: string): Promise<WeeklyReflect
   if (weekStart) params.set('week_start', weekStart);
   const qs = params.toString();
   return requestJson<WeeklyReflection>(qs ? `/friction-notes/reflection?${qs}` : '/friction-notes/reflection');
+}
+
+export function getPassiveSignals(targetDate: string): Promise<PassiveSignalsResponse> {
+  const params = new URLSearchParams({ target_date: targetDate });
+  return requestJson<PassiveSignalsResponse>(`/cues/passive-signals?${params.toString()}`);
 }
 
 export function extendActiveBlock(payload: ScheduleExtendRequest): Promise<ScheduleExtendResponse> {

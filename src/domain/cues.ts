@@ -1,5 +1,5 @@
 import type { OptionCardAccent, StatusBadgeVariant } from '@yggdrasil-lab/ui';
-import type { FrictionNote, FrictionTag, GridBlock, HabitCue } from './types';
+import type { FrictionNote, FrictionTag, GridBlock, HabitCue, PassiveSignalStatus } from './types';
 import { getAucklandWeekdayIndex, WEEKDAYS } from './schedule';
 
 export interface FrictionTagMeta {
@@ -48,24 +48,76 @@ export const FRICTION_TAG_OPTIONS: readonly FrictionTagMeta[] = [
   FRICTION_TAG_META.environment_missing,
 ];
 
-export const PASSIVE_RULE_LABELS: Record<string, string> = {
+export const CANONICAL_PASSIVE_RULE_LABELS: Record<string, string> = {
+  eir_morning_weigh_in: 'Morning Weigh-in (Eir)',
+  eir_fasted_walk_40m: 'Fasted Walk 40m (Eir)',
+  kratos_workout_completed: 'Workouts / Swimming (Kratos)',
+  plutus_monthly_checkin: 'Monthly Financial Check-in (Plutus)',
+};
+
+export const LEGACY_PASSIVE_RULE_LABELS: Record<string, string> = {
   kratos_fast_completed: 'Auto: Kratos fast logged',
   kratos_workout_logged: 'Auto: Kratos workout logged',
   eir_sleep_logged: 'Auto: Eir sleep logged',
   eir_hydration_logged: 'Auto: Eir hydration logged',
 };
 
+export const PASSIVE_RULE_LABELS: Record<string, string> = {
+  ...LEGACY_PASSIVE_RULE_LABELS,
+  ...CANONICAL_PASSIVE_RULE_LABELS,
+};
+
 export const PASSIVE_RULE_OPTIONS: readonly { value: string; label: string }[] = [
   { value: '', label: 'None (cue reminder only)' },
-  { value: 'kratos_fast_completed', label: 'Auto: Kratos fast logged' },
-  { value: 'kratos_workout_logged', label: 'Auto: Kratos workout logged' },
-  { value: 'eir_sleep_logged', label: 'Auto: Eir sleep logged' },
-  { value: 'eir_hydration_logged', label: 'Auto: Eir hydration logged' },
+  { value: 'eir_morning_weigh_in', label: 'Morning Weigh-in (Eir)' },
+  { value: 'eir_fasted_walk_40m', label: 'Fasted Walk 40m (Eir)' },
+  { value: 'kratos_workout_completed', label: 'Workouts / Swimming (Kratos)' },
+  { value: 'plutus_monthly_checkin', label: 'Monthly Financial Check-in (Plutus)' },
 ];
 
 export function formatPassiveRuleLabel(rule: string | null): string | null {
   if (!rule) return null;
   return PASSIVE_RULE_LABELS[rule] ?? `Auto: ${rule}`;
+}
+
+export function getPassiveRuleSelectOptions(
+  currentRule?: string | null
+): { value: string; label: string }[] {
+  const options = PASSIVE_RULE_OPTIONS.map((item) => ({ value: item.value, label: item.label }));
+  if (currentRule && !options.some((item) => item.value === currentRule)) {
+    options.push({
+      value: currentRule,
+      label: formatPassiveRuleLabel(currentRule) ?? currentRule,
+    });
+  }
+  return options;
+}
+
+export interface PassiveBadgeState {
+  label: string;
+  variant: 'idle' | 'success';
+  observed: boolean;
+}
+
+export function resolvePassiveBadgeState(
+  passiveRule: string | null,
+  passiveSignals?: Record<string, PassiveSignalStatus>
+): PassiveBadgeState | null {
+  const fallbackLabel = formatPassiveRuleLabel(passiveRule);
+  if (!passiveRule || !fallbackLabel) return null;
+  const signal = passiveSignals?.[passiveRule];
+  if (signal?.observed) {
+    return {
+      label: signal.fact_label ?? fallbackLabel,
+      variant: 'success',
+      observed: true,
+    };
+  }
+  return {
+    label: signal?.label ?? fallbackLabel,
+    variant: 'idle',
+    observed: false,
+  };
 }
 
 export interface ZoneChainGroup {

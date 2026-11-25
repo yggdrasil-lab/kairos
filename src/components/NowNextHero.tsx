@@ -9,10 +9,12 @@ import {
   resolveCategoryMeta,
   SOURCE_META,
 } from '../domain/schedule';
-import type { ExtendMinutes, NowNextState, ResolvedSlice } from '../domain/types';
+import type { DayWorkoutHydration, ExtendMinutes, NowNextState, ResolvedSlice } from '../domain/types';
+import { HydratedWorkoutBadge, KratosDayHeaderPill } from './HydratedWorkoutBadge';
 
 export interface NowNextHeroProps {
   nowNext: NowNextState;
+  workoutHydration?: DayWorkoutHydration | null;
   onAddCommitment: () => void;
   onExtendBlock?: (gridBlockId: number, minutes: ExtendMinutes) => Promise<void> | void;
   isExtending?: boolean;
@@ -92,6 +94,7 @@ const ExtendRecoveryControls: React.FC<{
 const ActiveSliceHeader: React.FC<{ slice: ResolvedSlice }> = ({ slice }) => {
   const categoryMeta = resolveCategoryMeta(slice.category);
   const sourceMeta = slice.source ? SOURCE_META[slice.source] : null;
+  const isReadOnlyKratos = slice.source === 'kratos' || Boolean(slice.read_only);
   return (
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div className="space-y-1 min-w-0">
@@ -108,7 +111,10 @@ const ActiveSliceHeader: React.FC<{ slice: ResolvedSlice }> = ({ slice }) => {
             <StatusBadge label={`Extended x${slice.extension_count}`} variant="warning" size="xs" />
           </span>
         )}
-        {sourceMeta ? (
+        {slice.hydrated_workout && <HydratedWorkoutBadge workout={slice.hydrated_workout} />}
+        {isReadOnlyKratos ? (
+          <StatusBadge label="Kratos" variant="success" size="xs" />
+        ) : sourceMeta ? (
           <StatusBadge label={`Carve-Out: ${sourceMeta.label}`} variant={sourceMeta.badgeVariant} size="xs" />
         ) : (
           <StatusBadge label={categoryMeta.label} variant={categoryMeta.badgeVariant} size="xs" />
@@ -125,9 +131,15 @@ const ActiveSliceContent: React.FC<{
   isExtending: boolean;
 }> = ({ slice, nowMinute, onExtendBlock, isExtending }) => {
   const progress = computeSliceProgress(slice.start_minute, slice.end_minute, nowMinute);
+  const workoutDetail = slice.hydrated_workout
+    ? [slice.hydrated_workout.emphasis, slice.hydrated_workout.notes].filter(Boolean).join(' - ')
+    : '';
   return (
     <div className="space-y-3">
       <ActiveSliceHeader slice={slice} />
+      {Boolean(workoutDetail) && (
+        <p className="text-xs text-emerald-300/90 break-words">{workoutDetail}</p>
+      )}
       <ProgressBar value={progress.percent} tone={slice.has_conflict ? 'rose' : 'brand'} size="md" label="Active slice progress" />
       <div className="flex items-center justify-between text-xs text-slate-300 font-mono">
         <span>{formatDuration(progress.elapsedMinutes)} elapsed</span>
@@ -214,6 +226,7 @@ const UpcomingPreview: React.FC<{ nextSlice: ResolvedSlice | undefined; nowMinut
 
 export const NowNextHero: React.FC<NowNextHeroProps> = ({
   nowNext,
+  workoutHydration,
   onAddCommitment,
   onExtendBlock,
   isExtending = false,
@@ -221,6 +234,11 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
   const active = nowNext.active_slice;
   const hasConflict = Boolean(active?.has_conflict) || nowNext.active_items.length > 1;
   const suppressedTail = Boolean(active?.suppressed_tail);
+  const effectiveHydration = workoutHydration ?? nowNext.workout_hydration ?? null;
+  const dayHeaderWorkout =
+    effectiveHydration?.planned_workout?.placement === 'day_header'
+      ? effectiveHydration.planned_workout
+      : null;
 
   return (
     <GlassCard data-testid="now-next-hero" className="space-y-4 border-accent/25">
@@ -231,6 +249,7 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
         suppressedTail={suppressedTail}
         targetDate={nowNext.target_date}
       />
+      {dayHeaderWorkout && <KratosDayHeaderPill workout={dayHeaderWorkout} />}
       {active ? (
         <ActiveSliceContent
           slice={active}

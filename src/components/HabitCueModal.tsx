@@ -15,7 +15,7 @@ import {
 import {
   formatBlockChipLabel,
   FRICTION_TAG_META,
-  PASSIVE_RULE_OPTIONS,
+  getPassiveRuleSelectOptions,
 } from '../domain/cues';
 import type { FrictionNote, GridBlock, HabitCue, HabitCueCreate } from '../domain/types';
 
@@ -170,7 +170,7 @@ const HabitCueAnchorFields: React.FC<{
           variant="brand"
           value={form.passiveRule}
           onChange={(e) => setForm((p) => ({ ...p, passiveRule: e.target.value }))}
-          options={PASSIVE_RULE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          options={getPassiveRuleSelectOptions(form.passiveRule)}
         />
       </FormField>
       <FormField label="Cue Visibility">

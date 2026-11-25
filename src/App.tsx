@@ -160,14 +160,14 @@ const CockpitBody: React.FC<{
   return (
     <div className="space-y-5">
       <div className={cls.hero}>
-        <NowNextHero nowNext={data.nowNext} onAddCommitment={modals.openAddCommitment} onExtendBlock={onExtendBlock} isExtending={schedule.isExtending} />
-        <ActiveZoneChainCard activeSlice={data.nowNext.active_slice} cues={cuesState.cues} onLogFriction={modals.openLogFriction} />
+        <NowNextHero nowNext={data.nowNext} workoutHydration={data.nowNext.workout_hydration ?? null} onAddCommitment={modals.openAddCommitment} onExtendBlock={onExtendBlock} isExtending={schedule.isExtending} />
+        <ActiveZoneChainCard activeSlice={data.nowNext.active_slice} cues={cuesState.cues} passiveSignals={cuesState.passiveSignals} onLogFriction={modals.openLogFriction} />
       </div>
       <div className="hidden lg:flex items-center justify-between">
         <SegmentedControl options={DESKTOP_TABS} value={desktopTab} onChange={onChangeDesktopTab} variant="brand" size="sm" idPrefix="desktop-tab" />
       </div>
       <div className={cls.today}>
-        <TodayTimeline schedule={data.daySchedule} exceptions={data.exceptions} nowMinute={schedule.nowMinute} onAddCommitment={modals.openAddCommitment} onEditCommitment={modals.openEditCommitment} onDeleteCommitment={(id) => void schedule.removeCommitment(id)} onSkipGridBlock={(id) => void schedule.skipGridBlockForDate(id)} onRestoreException={(id) => void schedule.restoreException(id)} />
+        <TodayTimeline schedule={data.daySchedule} exceptions={data.exceptions} nowMinute={schedule.nowMinute} workoutHydration={data.daySchedule.workout_hydration ?? null} onAddCommitment={modals.openAddCommitment} onEditCommitment={modals.openEditCommitment} onDeleteCommitment={(id) => void schedule.removeCommitment(id)} onSkipGridBlock={(id) => void schedule.skipGridBlockForDate(id)} onRestoreException={(id) => void schedule.restoreException(id)} />
       </div>
       <div className={cls.week}>
         <WeeklyGridView blocks={data.weeklyGrid} initialDayOfWeek={getAucklandWeekdayIndex(schedule.targetDate)} onAddBlock={modals.openAddGridBlock} onEditBlock={modals.openEditGridBlock} onToggleBlockActive={(block) => void schedule.editGridBlock(block.id, { active: !block.active })} onDeleteBlock={(id) => void schedule.removeGridBlock(id)} />
