@@ -4,7 +4,9 @@ import { Button, GlassCard, ProgressBar, StatusBadge } from '@yggdrasil-lab/ui';
 import {
   computeSliceProgress,
   formatDuration,
+  formatHydratedWorkoutDetail,
   formatMinuteRange,
+  isReadOnlyKratos,
   NUDGE_LABELS,
   resolveCategoryMeta,
   SOURCE_META,
@@ -94,7 +96,7 @@ const ExtendRecoveryControls: React.FC<{
 const ActiveSliceHeader: React.FC<{ slice: ResolvedSlice }> = ({ slice }) => {
   const categoryMeta = resolveCategoryMeta(slice.category);
   const sourceMeta = slice.source ? SOURCE_META[slice.source] : null;
-  const isReadOnlyKratos = slice.source === 'kratos' || Boolean(slice.read_only);
+  const readOnlyKratos = isReadOnlyKratos(slice.source, slice.read_only);
   return (
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div className="space-y-1 min-w-0">
@@ -112,7 +114,7 @@ const ActiveSliceHeader: React.FC<{ slice: ResolvedSlice }> = ({ slice }) => {
           </span>
         )}
         {slice.hydrated_workout && <HydratedWorkoutBadge workout={slice.hydrated_workout} />}
-        {isReadOnlyKratos ? (
+        {readOnlyKratos ? (
           <StatusBadge label="Kratos" variant="success" size="xs" />
         ) : sourceMeta ? (
           <StatusBadge label={`Carve-Out: ${sourceMeta.label}`} variant={sourceMeta.badgeVariant} size="xs" />
@@ -131,9 +133,7 @@ const ActiveSliceContent: React.FC<{
   isExtending: boolean;
 }> = ({ slice, nowMinute, onExtendBlock, isExtending }) => {
   const progress = computeSliceProgress(slice.start_minute, slice.end_minute, nowMinute);
-  const workoutDetail = slice.hydrated_workout
-    ? [slice.hydrated_workout.emphasis, slice.hydrated_workout.notes].filter(Boolean).join(' - ')
-    : '';
+  const workoutDetail = formatHydratedWorkoutDetail(slice.hydrated_workout, true);
   return (
     <div className="space-y-3">
       <ActiveSliceHeader slice={slice} />

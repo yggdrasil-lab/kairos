@@ -1,7 +1,14 @@
 import React from 'react';
 import { Calendar, Edit2, EyeOff, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Button, EmptyState, GlassCard, SectionHeader, StatusBadge } from '@yggdrasil-lab/ui';
-import { formatDuration, formatMinuteRange, resolveCategoryMeta, SOURCE_META } from '../domain/schedule';
+import {
+  formatDuration,
+  formatHydratedWorkoutDetail,
+  formatMinuteRange,
+  isReadOnlyKratos,
+  resolveCategoryMeta,
+  SOURCE_META,
+} from '../domain/schedule';
 import type {
   Commitment,
   DaySchedule,
@@ -28,7 +35,7 @@ const AllDayCommitmentCard: React.FC<{
   onEdit: (item: Commitment) => void;
   onDelete: (id: number) => void;
 }> = ({ item, onEdit, onDelete }) => {
-  const isReadOnlyKratos = item.source === 'kratos' || Boolean(item.read_only);
+  const readOnlyKratos = isReadOnlyKratos(item.source, item.read_only);
   const sourceMeta = SOURCE_META[item.source];
   const badgeLabel = item.source === 'kratos' ? 'Kratos' : sourceMeta.label;
   const badgeVariant = item.source === 'kratos' ? 'success' : sourceMeta.badgeVariant;
@@ -41,7 +48,7 @@ const AllDayCommitmentCard: React.FC<{
         </div>
         {Boolean(item.notes) && <p className="text-[11px] text-slate-400 truncate">{item.notes}</p>}
       </div>
-      {!isReadOnlyKratos && (
+      {!readOnlyKratos && (
         <div className="flex items-center gap-1 shrink-0">
           <Button variant="ghost" size="xs" aria-label={`Edit ${item.title}`} onClick={() => onEdit(item)} className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] justify-center">
             <Edit2 className="w-3.5 h-3.5" />
@@ -86,7 +93,7 @@ const AllDayCommitmentsBar: React.FC<{
 const SliceBadges: React.FC<{ slice: ResolvedSlice; isActive: boolean }> = ({ slice, isActive }) => {
   const categoryMeta = resolveCategoryMeta(slice.category);
   const sourceMeta = slice.source ? SOURCE_META[slice.source] : null;
-  const isReadOnlyKratos = slice.source === 'kratos' || Boolean(slice.read_only);
+  const readOnlyKratos = isReadOnlyKratos(slice.source, slice.read_only);
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs font-mono font-semibold text-accent">
@@ -96,7 +103,7 @@ const SliceBadges: React.FC<{ slice: ResolvedSlice; isActive: boolean }> = ({ sl
         {formatDuration(slice.end_minute - slice.start_minute)}
       </span>
       {isActive && <StatusBadge label="Live" variant="info" size="xs" isPulsing />}
-      {isReadOnlyKratos ? (
+      {readOnlyKratos ? (
         <StatusBadge label="Kratos" variant="success" size="xs" />
       ) : sourceMeta ? (
         <StatusBadge label={`Carve-Out: ${sourceMeta.label}`} variant={sourceMeta.badgeVariant} size="xs" />
@@ -117,9 +124,7 @@ const SliceActions: React.FC<{
   onDeleteCommitment: (id: number) => void;
   onSkipGridBlock: (id: number) => void;
 }> = ({ slice, commitment, onEditCommitment, onDeleteCommitment, onSkipGridBlock }) => {
-  const isReadOnlyKratos =
-    slice.source === 'kratos' || Boolean(slice.read_only) || Boolean(commitment?.read_only);
-  if (isReadOnlyKratos) {
+  if (isReadOnlyKratos(slice.source, slice.read_only || commitment?.read_only)) {
     return null;
   }
   return (
@@ -154,11 +159,7 @@ const SliceRow: React.FC<{
   const ringClass = props.isActive
     ? 'border-accent/60 bg-accent/10 ring-1 ring-accent/30'
     : 'border-border/80 bg-background/60';
-  const workoutDetail = props.slice.hydrated_workout
-    ? [props.slice.hydrated_workout.emphasis, props.slice.hydrated_workout.notes]
-        .filter(Boolean)
-        .join(' - ')
-    : '';
+  const workoutDetail = formatHydratedWorkoutDetail(props.slice.hydrated_workout, true);
   return (
     <div data-testid={`timeline-slice-${props.slice.slice_id}`} className={`rounded-xl border p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-colors ${ringClass}`}>
       <div className="space-y-1.5 min-w-0">

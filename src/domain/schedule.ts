@@ -1,5 +1,5 @@
 import type { StatusBadgeVariant } from '@yggdrasil-lab/ui';
-import type { CommitmentSource, GridBlock, NudgeMode } from './types';
+import type { CommitmentSource, GridBlock, HydratedWorkout, NudgeMode } from './types';
 
 export interface WeekdayOption {
   dayOfWeek: number;
@@ -61,6 +61,25 @@ export function resolveCategoryMeta(category: string | null): CategoryMeta {
     return CATEGORY_META.general;
   }
   return CATEGORY_META[category] ?? { label: category, badgeVariant: 'idle' };
+}
+
+export function isReadOnlyKratos(
+  source: CommitmentSource | null | undefined,
+  readOnly?: boolean
+): boolean {
+  return source === 'kratos' || Boolean(readOnly);
+}
+
+export function formatHydratedWorkoutDetail(
+  workout: HydratedWorkout | null | undefined,
+  includeNotes = false
+): string {
+  if (!workout) return '';
+  const parts = [workout.emphasis, workout.workout_type];
+  if (includeNotes) {
+    parts.push(workout.notes);
+  }
+  return parts.filter(Boolean).join(' - ');
 }
 
 export function formatMinute(minute: number): string {

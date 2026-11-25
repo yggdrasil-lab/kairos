@@ -81,6 +81,7 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(page.getByTestId('active-zone-chain-card')).toContainText('Step on scale beside bathroom door');
       await expect(page.getByTestId('active-zone-chain-card').getByTestId('passive-signal-observed')).toContainText('Weighed in 07:15 (72.4 kg)');
       await expect(page.getByTestId('active-zone-chain-card')).toContainText('Fasted Walk 40m (Eir)');
+      await expect(page.getByTestId('active-zone-chain-card')).not.toContainText(/missed|streak/i);
 
       await page.screenshot({
         path: `screenshots/${platform}/01-now-cockpit.png`,
@@ -180,7 +181,9 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(page.getByTestId('cue-catalog-view')).toContainText('Swim 1500m logged');
       await expect(page.getByTestId('cue-catalog-view')).toContainText('Fasted Walk 40m (Eir)');
       await expect(page.getByTestId('cue-catalog-view')).toContainText('Monthly Financial Check-in (Plutus)');
-      await expect(page.getByTestId('cue-catalog-view')).not.toContainText(/missed|streak/i);
+      for (const cueId of [1, 2, 3, 4]) {
+        await expect(page.getByTestId(`habit-cue-${cueId}`)).not.toContainText(/missed|streak/i);
+      }
 
       await page.screenshot({
         path: `screenshots/${platform}/06-cues-catalog.png`,

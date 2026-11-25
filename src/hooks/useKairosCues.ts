@@ -10,6 +10,7 @@ import type {
   WeeklyReflection,
 } from '../domain/types';
 import {
+  ApiRoutingError,
   createCue,
   createFrictionNote,
   deleteCue,
@@ -18,6 +19,9 @@ import {
   fetchFrictionNotes,
   fetchWeeklyReflection,
   getPassiveSignals,
+  isApiRoutingError,
+  isSessionExpiredError,
+  SessionExpiredError,
   updateCue,
 } from '../services/api';
 
@@ -45,14 +49,45 @@ function resolveCueError(error: unknown): string {
   return error instanceof Error && error.message ? error.message : 'Unexpected cue or friction error';
 }
 
+function usePassiveSignalsQuery(targetDate: string) {
+  const [passiveSignals, setPassiveSignals] = useState<Record<string, PassiveSignalStatus>>({});
+  const [passiveSignalsError, setPassiveSignalsError] = useState<string | null>(null);
+
+  const loadPassiveSignals = useCallback(async (selectedDate: string) => {
+    try {
+      const response = await getPassiveSignals(selectedDate);
+      setPassiveSignals(response.signals ?? {});
+      setPassiveSignalsError(null);
+    } catch (error: unknown) {
+      setPassiveSignalsError(resolveCueError(error));
+      if (
+        error instanceof SessionExpiredError ||
+        error instanceof ApiRoutingError ||
+        isSessionExpiredError(error) ||
+        isApiRoutingError(error)
+      ) {
+        throw error;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPassiveSignals(targetDate).catch(() => {
+      /* Surfaced via passiveSignalsError -> cuesError */
+    });
+  }, [loadPassiveSignals, targetDate]);
+
+  return { passiveSignals, passiveSignalsError, loadPassiveSignals };
+}
+
 function useCueQueries(targetDate: string, weekStart: string) {
   const [cues, setCues] = useState<HabitCue[]>([]);
   const [frictionNotes, setFrictionNotes] = useState<FrictionNote[]>([]);
   const [reflection, setReflection] = useState<WeeklyReflection | null>(null);
-  const [passiveSignals, setPassiveSignals] = useState<Record<string, PassiveSignalStatus>>({});
   const [isLoadingCues, setIsLoadingCues] = useState<boolean>(true);
   const [isLoadingReflection, setIsLoadingReflection] = useState<boolean>(true);
   const [cuesError, setCuesError] = useState<string | null>(null);
+  const { passiveSignals, passiveSignalsError, loadPassiveSignals } = usePassiveSignalsQuery(targetDate);
 
   const loadCuesAndNotes = useCallback(async () => {
     setIsLoadingCues(true);
@@ -81,15 +116,6 @@ function useCueQueries(targetDate: string, weekStart: string) {
     }
   }, []);
 
-  const loadPassiveSignals = useCallback(async (selectedDate: string) => {
-    try {
-      const response = await getPassiveSignals(selectedDate);
-      setPassiveSignals(response.signals ?? {});
-    } catch {
-      setPassiveSignals({});
-    }
-  }, []);
-
   useEffect(() => {
     void loadCuesAndNotes();
   }, [loadCuesAndNotes]);
@@ -97,10 +123,6 @@ function useCueQueries(targetDate: string, weekStart: string) {
   useEffect(() => {
     void loadReflection(weekStart);
   }, [loadReflection, weekStart]);
-
-  useEffect(() => {
-    void loadPassiveSignals(targetDate);
-  }, [loadPassiveSignals, targetDate]);
 
   const refreshCues = useCallback(async () => {
     await Promise.all([
@@ -117,7 +139,7 @@ function useCueQueries(targetDate: string, weekStart: string) {
     passiveSignals,
     isLoadingCues,
     isLoadingReflection,
-    cuesError,
+    cuesError: cuesError ?? passiveSignalsError,
     refreshCues,
   };
 }

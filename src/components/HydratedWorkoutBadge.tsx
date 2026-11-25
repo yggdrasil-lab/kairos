@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dumbbell } from 'lucide-react';
 import { StatusBadge } from '@yggdrasil-lab/ui';
+import { formatHydratedWorkoutDetail } from '../domain/schedule';
 import type { HydratedWorkout } from '../domain/types';
 
 export const HydratedWorkoutBadge: React.FC<{ workout: HydratedWorkout }> = ({ workout }) => (
@@ -10,7 +11,7 @@ export const HydratedWorkoutBadge: React.FC<{ workout: HydratedWorkout }> = ({ w
 );
 
 export const KratosDayHeaderPill: React.FC<{ workout: HydratedWorkout }> = ({ workout }) => {
-  const detail = [workout.emphasis, workout.workout_type].filter(Boolean).join(' - ');
+  const detail = formatHydratedWorkoutDetail(workout);
   return (
     <div
       data-testid="kratos-day-header-pill"
