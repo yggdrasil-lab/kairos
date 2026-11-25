@@ -79,7 +79,7 @@ const CommitmentTimeFields: React.FC<{
   <>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <FormField label="Date" htmlFor="commitment-date" required>
-        <TextInput id="commitment-date" data-testid="commitment-date-input" variant="blue" type="date" value={form.targetDate} onChange={(e) => setForm((p) => ({ ...p, targetDate: e.target.value }))} required />
+        <TextInput id="commitment-date" data-testid="commitment-date-input" variant="brand" type="date" value={form.targetDate} onChange={(e) => setForm((p) => ({ ...p, targetDate: e.target.value }))} required />
       </FormField>
       <FormField label="Schedule Type">
         <button
@@ -87,7 +87,7 @@ const CommitmentTimeFields: React.FC<{
           data-testid="commitment-allday-toggle"
           onClick={() => setForm((p) => ({ ...p, allDay: !p.allDay }))}
           className={`min-h-[44px] w-full rounded-xl border px-3 text-base sm:text-xs font-semibold transition-colors ${
-            form.allDay ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'bg-background border-border text-slate-300 hover:border-slate-600'
+            form.allDay ? 'bg-accent/20 border-accent/50 text-accent' : 'bg-background border-border text-slate-300 hover:border-slate-600'
           }`}
         >
           {form.allDay ? 'All-Day Commitment' : 'Timed Carve-Out'}
@@ -97,10 +97,10 @@ const CommitmentTimeFields: React.FC<{
     {!form.allDay && (
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Start" htmlFor="commitment-start" required>
-          <TextInput id="commitment-start" data-testid="commitment-start-input" variant="blue" type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} required />
+          <TextInput id="commitment-start" data-testid="commitment-start-input" variant="brand" type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} required />
         </FormField>
         <FormField label="End" htmlFor="commitment-end" required>
-          <TextInput id="commitment-end" data-testid="commitment-end-input" variant="blue" type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} required />
+          <TextInput id="commitment-end" data-testid="commitment-end-input" variant="brand" type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} required />
         </FormField>
       </div>
     )}
@@ -116,14 +116,14 @@ const CommitmentFormBody: React.FC<{
   <form id="commitment-form" onSubmit={onSubmit} className="space-y-4">
     {Boolean(error) && <AlertBanner variant="error">{error}</AlertBanner>}
     <FormField label="Title" htmlFor="commitment-title" required>
-      <TextInput id="commitment-title" data-testid="commitment-title-input" variant="blue" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Clinic Appointment" required />
+      <TextInput id="commitment-title" data-testid="commitment-title-input" variant="brand" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Clinic Appointment" required />
     </FormField>
     <CommitmentTimeFields form={form} setForm={setForm} />
     <FormField label="Nudge Mode" htmlFor="commitment-nudge">
-      <SelectInput id="commitment-nudge" variant="blue" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
+      <SelectInput id="commitment-nudge" variant="brand" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
     </FormField>
     <FormField label="Notes" htmlFor="commitment-notes">
-      <TextArea id="commitment-notes" variant="blue" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional context or location" />
+      <TextArea id="commitment-notes" variant="brand" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional context or location" />
     </FormField>
   </form>
 );
@@ -147,7 +147,7 @@ const CommitmentFooter: React.FC<{
       <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={onClose} className="min-h-[44px] sm:min-h-[36px]">
         Cancel
       </Button>
-      <Button type="submit" form="commitment-form" variant="blue" size="sm" loading={submitting} data-testid="commitment-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
+      <Button type="submit" form="commitment-form" variant="brand" size="sm" loading={submitting} data-testid="commitment-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
         {isEditing ? 'Save Changes' : 'Create Commitment'}
       </Button>
     </div>
@@ -211,7 +211,7 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
       onClose={onClose}
       title={editing ? 'Edit Commitment' : 'Add Commitment'}
       subtitle="Dated commitments automatically carve recurring weekly blocks."
-      headerIcon={<CalendarPlus className="w-5 h-5 text-sky-400" />}
+      headerIcon={<CalendarPlus className="w-5 h-5 text-accent" />}
       footer={
         <CommitmentFooter
           isEditing={Boolean(editing)}

@@ -65,7 +65,7 @@ const SliceBadges: React.FC<{ slice: ResolvedSlice; isActive: boolean }> = ({ sl
   const sourceMeta = slice.source ? SOURCE_META[slice.source] : null;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-mono font-semibold text-sky-300">
+      <span className="text-xs font-mono font-semibold text-accent">
         {formatMinuteRange(slice.start_minute, slice.end_minute)}
       </span>
       <span className="text-[11px] font-mono text-slate-500">
@@ -118,7 +118,7 @@ const SliceRow: React.FC<{
   onSkipGridBlock: (id: number) => void;
 }> = (props) => {
   const ringClass = props.isActive
-    ? 'border-sky-500/60 bg-sky-500/10 ring-1 ring-sky-500/30'
+    ? 'border-accent/60 bg-accent/10 ring-1 ring-accent/30'
     : 'border-border/80 bg-background/60';
   return (
     <div data-testid={`timeline-slice-${props.slice.slice_id}`} className={`rounded-xl border p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-colors ${ringClass}`}>
@@ -173,9 +173,9 @@ export const TodayTimeline: React.FC<TodayTimelineProps> = ({
         title="Today Timeline"
         subtitle={`${schedule.slices.length} resolved slices on ${schedule.target_date}`}
         icon={<Calendar className="w-4 h-4" />}
-        variant="blue"
+        variant="brand"
         actions={
-          <Button variant="blue" size="xs" icon={<Plus className="w-3.5 h-3.5" />} onClick={onAddCommitment} className="min-h-[44px] sm:min-h-[32px]">
+          <Button variant="brand" size="xs" icon={<Plus className="w-3.5 h-3.5" />} onClick={onAddCommitment} className="min-h-[44px] sm:min-h-[32px]">
             Add Commitment
           </Button>
         }
@@ -185,7 +185,7 @@ export const TodayTimeline: React.FC<TodayTimelineProps> = ({
         <EmptyState
           title="No scheduled slices today"
           description="Add a dated commitment or configure a recurring block on the Mon-Sun Weekly Grid."
-          action={<Button variant="blue" size="sm" onClick={onAddCommitment} className="min-h-[44px]">Add Commitment</Button>}
+          action={<Button variant="brand" size="sm" onClick={onAddCommitment} className="min-h-[44px]">Add Commitment</Button>}
         />
       ) : (
         <div className="space-y-2.5">

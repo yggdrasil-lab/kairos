@@ -69,7 +69,7 @@ const ZoneChainGroupSection: React.FC<{
   onLogFriction: (context: Partial<FrictionModalContext>) => void;
 }> = ({ group, blockId, blockTitle, onLogFriction }) => (
   <div className="space-y-2">
-    <div className="text-[11px] font-semibold uppercase tracking-wider text-sky-300/90">
+    <div className="text-[11px] font-semibold uppercase tracking-wider text-accent/90">
       {group.zoneChain}
     </div>
     <div className="space-y-2">
@@ -97,10 +97,10 @@ export const ActiveZoneChainCard: React.FC<ActiveZoneChainCardProps> = ({
   const groups = getActiveCuesForGridBlock(cues, activeSlice.source_id);
 
   return (
-    <GlassCard data-testid="active-zone-chain-card" className="space-y-3 border-sky-500/20">
+    <GlassCard data-testid="active-zone-chain-card" className="space-y-3 border-accent/20">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Compass className="w-4 h-4 text-sky-400 shrink-0" />
+          <Compass className="w-4 h-4 text-accent shrink-0" />
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-slate-100">Zone Chain Cues</h3>
             <p className="text-xs text-slate-400 truncate">

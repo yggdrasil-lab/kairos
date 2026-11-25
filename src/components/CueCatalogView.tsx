@@ -45,7 +45,7 @@ const CueRecentFrictionList: React.FC<{
   return (
     <CollapsibleSection
       title={`Recent Friction (${cue.recent_friction.length})`}
-      icon={<History className="w-3.5 h-3.5 text-sky-400" />}
+      icon={<History className="w-3.5 h-3.5 text-accent" />}
       variant="inline"
       defaultOpen={false}
     >
@@ -195,7 +195,7 @@ const CueCard: React.FC<{
               {anchoredBlocks.map((block) => (
                 <span
                   key={block.id}
-                  className="px-2 py-0.5 rounded-md border border-sky-500/30 bg-sky-500/10 text-[11px] text-sky-200"
+                  className="px-2 py-0.5 rounded-md border border-accent/30 bg-accent/10 text-[11px] text-accent"
                 >
                   {formatBlockChipLabel(block)}
                 </span>
@@ -236,10 +236,10 @@ export const CueCatalogView: React.FC<CueCatalogViewProps> = ({
         title="Habit Cue Catalog"
         subtitle="Physical zone chains anchored to weekly blocks - zero streaks, zero guilt"
         icon={<Compass className="w-4 h-4" />}
-        variant="blue"
+        variant="brand"
         actions={
           <Button
-            variant="blue"
+            variant="brand"
             size="xs"
             data-testid="add-cue-btn"
             icon={<Plus className="w-3.5 h-3.5" />}
@@ -255,7 +255,7 @@ export const CueCatalogView: React.FC<CueCatalogViewProps> = ({
           title="No habit cues yet"
           description="Group small physical anchors by room or transition chain and link them to weekly blocks."
           action={
-            <Button variant="blue" size="sm" onClick={onAddCue} className="min-h-[44px]">
+            <Button variant="brand" size="sm" onClick={onAddCue} className="min-h-[44px]">
               Add First Cue
             </Button>
           }
@@ -265,7 +265,7 @@ export const CueCatalogView: React.FC<CueCatalogViewProps> = ({
           {groups.map((group) => (
             <div key={group.zoneChain} className="space-y-2">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-sky-300">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-accent">
                   {group.zoneChain}
                 </h3>
                 <span className="text-[11px] font-mono text-slate-400">

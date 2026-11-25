@@ -49,6 +49,19 @@ for (const { name: platform, options } of PLATFORMS) {
         return await page.getByTestId('now-next-hero').isVisible();
       }).toBe(true);
 
+      const themeTokens = await page.evaluate(() => {
+        const root = document.documentElement;
+        const styles = getComputedStyle(root);
+        return {
+          theme: root.dataset.theme,
+          accent: styles.getPropertyValue('--ui-accent').trim(),
+          radiusCard: styles.getPropertyValue('--ui-radius-card').trim(),
+        };
+      });
+      expect(themeTokens.theme).toBe('kairos');
+      expect(themeTokens.accent).toBe('196 181 253');
+      expect(themeTokens.radiusCard).toBe('22px');
+
       await expect(page.getByTestId('now-next-hero')).toContainText('Wednesday Deep Work');
       await expect(page.getByTestId('now-next-hero')).toContainText('<15m Tail Suppressed');
       await expect(page.getByTestId('now-next-upcoming')).toContainText('Design Review Sync');
@@ -59,6 +72,7 @@ for (const { name: platform, options } of PLATFORMS) {
       await page.screenshot({
         path: `screenshots/${platform}/01-now-cockpit.png`,
         fullPage: platform === 'desktop',
+        animations: 'disabled',
       });
 
       await page.getByTestId('cue-log-friction-1').click();
@@ -73,6 +87,7 @@ for (const { name: platform, options } of PLATFORMS) {
 
       await page.screenshot({
         path: `screenshots/${platform}/05-log-friction-modal.png`,
+        animations: 'disabled',
       });
 
       await page.getByTestId('friction-submit-btn').click();
@@ -92,6 +107,7 @@ for (const { name: platform, options } of PLATFORMS) {
       await page.screenshot({
         path: `screenshots/${platform}/02-today-timeline.png`,
         fullPage: platform === 'desktop',
+        animations: 'disabled',
       });
 
       if (platform === 'desktop') {
@@ -112,6 +128,7 @@ for (const { name: platform, options } of PLATFORMS) {
       await page.screenshot({
         path: `screenshots/${platform}/03-weekly-grid.png`,
         fullPage: platform === 'desktop',
+        animations: 'disabled',
       });
 
       if (platform === 'desktop') {
@@ -125,6 +142,7 @@ for (const { name: platform, options } of PLATFORMS) {
       await page.screenshot({
         path: `screenshots/${platform}/06-cues-catalog.png`,
         fullPage: platform === 'desktop',
+        animations: 'disabled',
       });
 
       await page.getByTestId('cues-subtab-reflection').click();
@@ -134,6 +152,7 @@ for (const { name: platform, options } of PLATFORMS) {
       await page.screenshot({
         path: `screenshots/${platform}/07-weekly-reflection.png`,
         fullPage: platform === 'desktop',
+        animations: 'disabled',
       });
 
       await page.getByTestId('header-add-btn').click();
@@ -150,6 +169,7 @@ for (const { name: platform, options } of PLATFORMS) {
 
       await page.screenshot({
         path: `screenshots/${platform}/04-add-commitment-modal.png`,
+        animations: 'disabled',
       });
 
       await page.getByTestId('commitment-submit-btn').click();

@@ -87,7 +87,7 @@ const BlockRecentFrictionHints: React.FC<{ notes: FrictionNote[] }> = ({ notes }
   return (
     <CollapsibleSection
       title={`Recent Friction (${notes.length})`}
-      icon={<History className="w-3.5 h-3.5 text-sky-400" />}
+      icon={<History className="w-3.5 h-3.5 text-accent" />}
       variant="card"
       defaultOpen={false}
     >
@@ -120,29 +120,29 @@ const GridBlockFormBody: React.FC<{
   <form id="grid-block-form" onSubmit={onSubmit} className="space-y-4">
     {Boolean(error) && <AlertBanner variant="error">{error}</AlertBanner>}
     <FormField label="Block Title" htmlFor="grid-block-title" required>
-      <TextInput id="grid-block-title" data-testid="grid-block-title-input" variant="blue" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Deep Work Sprint" required />
+      <TextInput id="grid-block-title" data-testid="grid-block-title-input" variant="brand" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Deep Work Sprint" required />
     </FormField>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <FormField label="Weekday" htmlFor="grid-block-day" required>
-        <SelectInput id="grid-block-day" variant="blue" value={String(form.dayOfWeek)} onChange={(e) => setForm((p) => ({ ...p, dayOfWeek: Number(e.target.value) }))} options={WEEKDAYS.map((d) => ({ value: String(d.dayOfWeek), label: d.label }))} />
+        <SelectInput id="grid-block-day" variant="brand" value={String(form.dayOfWeek)} onChange={(e) => setForm((p) => ({ ...p, dayOfWeek: Number(e.target.value) }))} options={WEEKDAYS.map((d) => ({ value: String(d.dayOfWeek), label: d.label }))} />
       </FormField>
       <FormField label="Category" htmlFor="grid-block-category" required>
-        <SelectInput id="grid-block-category" variant="blue" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} options={CATEGORY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))} />
+        <SelectInput id="grid-block-category" variant="brand" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} options={CATEGORY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))} />
       </FormField>
     </div>
     <div className="grid grid-cols-2 gap-3">
       <FormField label="Start" htmlFor="grid-block-start" required>
-        <TextInput id="grid-block-start" variant="blue" type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} required />
+        <TextInput id="grid-block-start" variant="brand" type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} required />
       </FormField>
       <FormField label="End" htmlFor="grid-block-end" required>
-        <TextInput id="grid-block-end" variant="blue" type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} required />
+        <TextInput id="grid-block-end" variant="brand" type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} required />
       </FormField>
     </div>
     <FormField label="Nudge Mode" htmlFor="grid-block-nudge">
-      <SelectInput id="grid-block-nudge" variant="blue" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
+      <SelectInput id="grid-block-nudge" variant="brand" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
     </FormField>
     <FormField label="Notes" htmlFor="grid-block-notes">
-      <TextArea id="grid-block-notes" variant="blue" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional block intent" />
+      <TextArea id="grid-block-notes" variant="brand" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional block intent" />
     </FormField>
     {isEditing && <BlockRecentFrictionHints notes={recentFriction} />}
   </form>
@@ -167,7 +167,7 @@ const GridBlockFooter: React.FC<{
       <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={onClose} className="min-h-[44px] sm:min-h-[36px]">
         Cancel
       </Button>
-      <Button type="submit" form="grid-block-form" variant="blue" size="sm" loading={submitting} data-testid="grid-block-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
+      <Button type="submit" form="grid-block-form" variant="brand" size="sm" loading={submitting} data-testid="grid-block-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
         {isEditing ? 'Save Block' : 'Create Block'}
       </Button>
     </div>
@@ -232,7 +232,7 @@ export const GridBlockModal: React.FC<GridBlockModalProps> = ({
       onClose={onClose}
       title={editing ? 'Edit Grid Block' : 'Add Weekly Grid Block'}
       subtitle="Define your recurring ideal week anchor."
-      headerIcon={<LayoutGrid className="w-5 h-5 text-sky-400" />}
+      headerIcon={<LayoutGrid className="w-5 h-5 text-accent" />}
       footer={
         <GridBlockFooter
           isEditing={Boolean(editing)}

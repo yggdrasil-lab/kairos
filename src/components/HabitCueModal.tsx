@@ -89,7 +89,7 @@ const CueRecentFrictionSection: React.FC<{ notes: FrictionNote[] }> = ({ notes }
   return (
     <CollapsibleSection
       title={`Recent Friction (${notes.length})`}
-      icon={<History className="w-3.5 h-3.5 text-sky-400" />}
+      icon={<History className="w-3.5 h-3.5 text-accent" />}
       variant="card"
       defaultOpen={false}
     >
@@ -120,7 +120,7 @@ const HabitCuePrimaryFields: React.FC<{
       <TextInput
         id="cue-title"
         data-testid="cue-title-input"
-        variant="blue"
+        variant="brand"
         value={form.title}
         onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
         placeholder="e.g. Fill water bottle at counter"
@@ -133,7 +133,7 @@ const HabitCuePrimaryFields: React.FC<{
           <TextInput
             id="cue-zone-chain"
             data-testid="cue-zone-input"
-            variant="blue"
+            variant="brand"
             value={form.zoneChain}
             onChange={(e) => setForm((p) => ({ ...p, zoneChain: e.target.value }))}
             placeholder="e.g. Kitchen -> Desk"
@@ -145,7 +145,7 @@ const HabitCuePrimaryFields: React.FC<{
         <TextInput
           id="cue-chain-order"
           data-testid="cue-order-input"
-          variant="blue"
+          variant="brand"
           type="number"
           min={1}
           value={form.chainOrder}
@@ -167,7 +167,7 @@ const HabitCueAnchorFields: React.FC<{
       <FormField label="Passive Signal (Optional)" htmlFor="cue-passive-rule">
         <SelectInput
           id="cue-passive-rule"
-          variant="blue"
+          variant="brand"
           value={form.passiveRule}
           onChange={(e) => setForm((p) => ({ ...p, passiveRule: e.target.value }))}
           options={PASSIVE_RULE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -180,7 +180,7 @@ const HabitCueAnchorFields: React.FC<{
           onClick={() => setForm((p) => ({ ...p, active: !p.active }))}
           className={`min-h-[44px] w-full rounded-xl border px-3 text-base sm:text-xs font-semibold transition-colors ${
             form.active
-              ? 'bg-sky-500/20 border-sky-500/50 text-sky-300'
+              ? 'bg-accent/20 border-accent/50 text-accent'
               : 'bg-background border-border text-slate-300 hover:border-slate-600'
           }`}
         >
@@ -192,7 +192,7 @@ const HabitCueAnchorFields: React.FC<{
       <FormField label="Anchored Weekly Blocks">
         <ChipSelector
           multiSelect
-          variant="blue"
+          variant="brand"
           size="sm"
           options={blockOptions}
           selectedValues={form.gridBlockIds}
@@ -203,7 +203,7 @@ const HabitCueAnchorFields: React.FC<{
     <FormField label="Notes" htmlFor="cue-notes">
       <TextArea
         id="cue-notes"
-        variant="blue"
+        variant="brand"
         rows={2}
         value={form.notes}
         onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
@@ -277,7 +277,7 @@ const HabitCueFooter: React.FC<{
       <Button
         type="submit"
         form="habit-cue-form"
-        variant="blue"
+        variant="brand"
         size="sm"
         loading={submitting}
         data-testid="cue-submit-btn"
@@ -346,7 +346,7 @@ export const HabitCueModal: React.FC<HabitCueModalProps> = ({
       onClose={onClose}
       title={editing ? 'Edit Habit Cue' : 'Add Habit Cue'}
       subtitle="Anchor small physical cues to recurring weekly blocks."
-      headerIcon={<Compass className="w-5 h-5 text-sky-400" />}
+      headerIcon={<Compass className="w-5 h-5 text-accent" />}
       footer={
         <HabitCueFooter
           isEditing={Boolean(editing)}
