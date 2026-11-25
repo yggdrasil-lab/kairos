@@ -19,16 +19,17 @@ import {
 } from '@yggdrasil-lab/ui';
 import {
   formatBlockChipLabel,
-  formatPassiveRuleLabel,
   FRICTION_TAG_META,
   groupCuesByZoneChain,
 } from '../domain/cues';
-import type { GridBlock, HabitCue } from '../domain/types';
+import type { GridBlock, HabitCue, PassiveSignalStatus } from '../domain/types';
 import type { FrictionModalContext } from '../hooks/useCockpitModals';
+import { PassiveSignalBadge } from './PassiveSignalBadge';
 
 export interface CueCatalogViewProps {
   cues: HabitCue[];
   weeklyGrid: GridBlock[];
+  passiveSignals?: Record<string, PassiveSignalStatus>;
   onAddCue: () => void;
   onEditCue: (cue: HabitCue) => void;
   onToggleCueActive: (cue: HabitCue) => void;
@@ -148,6 +149,7 @@ const CueCardActions: React.FC<{
 const CueCard: React.FC<{
   cue: HabitCue;
   blockMap: Map<number, GridBlock>;
+  passiveSignals?: Record<string, PassiveSignalStatus>;
   onEditCue: (cue: HabitCue) => void;
   onToggleCueActive: (cue: HabitCue) => void;
   onDeleteCue: (cueId: number) => void;
@@ -156,13 +158,13 @@ const CueCard: React.FC<{
 }> = ({
   cue,
   blockMap,
+  passiveSignals,
   onEditCue,
   onToggleCueActive,
   onDeleteCue,
   onLogFriction,
   onDeleteFrictionNote,
 }) => {
-  const passiveLabel = formatPassiveRuleLabel(cue.passive_rule);
   const anchoredBlocks = cue.grid_block_ids
     .map((id) => blockMap.get(id))
     .filter((b): b is GridBlock => Boolean(b));
@@ -182,9 +184,7 @@ const CueCard: React.FC<{
               Step #{cue.chain_order}
             </span>
             <h4 className="text-sm font-semibold text-slate-100 break-words">{cue.title}</h4>
-            {Boolean(passiveLabel) && (
-              <StatusBadge label={passiveLabel as string} variant="idle" size="xs" />
-            )}
+            <PassiveSignalBadge passiveRule={cue.passive_rule} passiveSignals={passiveSignals} />
             {!cue.active && <StatusBadge label="Paused" variant="idle" size="xs" />}
           </div>
           {Boolean(cue.notes) && (
@@ -220,6 +220,7 @@ const CueCard: React.FC<{
 export const CueCatalogView: React.FC<CueCatalogViewProps> = ({
   cues,
   weeklyGrid,
+  passiveSignals,
   onAddCue,
   onEditCue,
   onToggleCueActive,
@@ -278,6 +279,7 @@ export const CueCatalogView: React.FC<CueCatalogViewProps> = ({
                     key={cue.id}
                     cue={cue}
                     blockMap={blockMap}
+                    passiveSignals={passiveSignals}
                     onEditCue={onEditCue}
                     onToggleCueActive={onToggleCueActive}
                     onDeleteCue={onDeleteCue}

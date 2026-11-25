@@ -50,6 +50,7 @@ export const CuesWorkspace: React.FC<CuesWorkspaceProps> = ({
         <CueCatalogView
           cues={cuesState.cues}
           weeklyGrid={weeklyGrid}
+          passiveSignals={cuesState.passiveSignals}
           onAddCue={onAddCue}
           onEditCue={onEditCue}
           onToggleCueActive={(cue) => void cuesState.editCue(cue.id, { active: !cue.active })}

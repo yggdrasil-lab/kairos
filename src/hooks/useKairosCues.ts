@@ -6,9 +6,11 @@ import type {
   HabitCue,
   HabitCueCreate,
   HabitCueUpdate,
+  PassiveSignalStatus,
   WeeklyReflection,
 } from '../domain/types';
 import {
+  ApiRoutingError,
   createCue,
   createFrictionNote,
   deleteCue,
@@ -16,6 +18,10 @@ import {
   fetchCues,
   fetchFrictionNotes,
   fetchWeeklyReflection,
+  getPassiveSignals,
+  isApiRoutingError,
+  isSessionExpiredError,
+  SessionExpiredError,
   updateCue,
 } from '../services/api';
 
@@ -23,6 +29,7 @@ export interface KairosCuesActions {
   cues: HabitCue[];
   frictionNotes: FrictionNote[];
   reflection: WeeklyReflection | null;
+  passiveSignals: Record<string, PassiveSignalStatus>;
   weekStart: string;
   isLoadingCues: boolean;
   isLoadingReflection: boolean;
@@ -42,13 +49,45 @@ function resolveCueError(error: unknown): string {
   return error instanceof Error && error.message ? error.message : 'Unexpected cue or friction error';
 }
 
-function useCueQueries(weekStart: string) {
+function usePassiveSignalsQuery(targetDate: string) {
+  const [passiveSignals, setPassiveSignals] = useState<Record<string, PassiveSignalStatus>>({});
+  const [passiveSignalsError, setPassiveSignalsError] = useState<string | null>(null);
+
+  const loadPassiveSignals = useCallback(async (selectedDate: string) => {
+    try {
+      const response = await getPassiveSignals(selectedDate);
+      setPassiveSignals(response.signals ?? {});
+      setPassiveSignalsError(null);
+    } catch (error: unknown) {
+      setPassiveSignalsError(resolveCueError(error));
+      if (
+        error instanceof SessionExpiredError ||
+        error instanceof ApiRoutingError ||
+        isSessionExpiredError(error) ||
+        isApiRoutingError(error)
+      ) {
+        throw error;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPassiveSignals(targetDate).catch(() => {
+      /* Surfaced via passiveSignalsError -> cuesError */
+    });
+  }, [loadPassiveSignals, targetDate]);
+
+  return { passiveSignals, passiveSignalsError, loadPassiveSignals };
+}
+
+function useCueQueries(targetDate: string, weekStart: string) {
   const [cues, setCues] = useState<HabitCue[]>([]);
   const [frictionNotes, setFrictionNotes] = useState<FrictionNote[]>([]);
   const [reflection, setReflection] = useState<WeeklyReflection | null>(null);
   const [isLoadingCues, setIsLoadingCues] = useState<boolean>(true);
   const [isLoadingReflection, setIsLoadingReflection] = useState<boolean>(true);
   const [cuesError, setCuesError] = useState<string | null>(null);
+  const { passiveSignals, passiveSignalsError, loadPassiveSignals } = usePassiveSignalsQuery(targetDate);
 
   const loadCuesAndNotes = useCallback(async () => {
     setIsLoadingCues(true);
@@ -86,16 +125,29 @@ function useCueQueries(weekStart: string) {
   }, [loadReflection, weekStart]);
 
   const refreshCues = useCallback(async () => {
-    await Promise.all([loadCuesAndNotes(), loadReflection(weekStart)]);
-  }, [loadCuesAndNotes, loadReflection, weekStart]);
+    await Promise.all([
+      loadCuesAndNotes(),
+      loadReflection(weekStart),
+      loadPassiveSignals(targetDate),
+    ]);
+  }, [loadCuesAndNotes, loadReflection, loadPassiveSignals, weekStart, targetDate]);
 
-  return { cues, frictionNotes, reflection, isLoadingCues, isLoadingReflection, cuesError, refreshCues };
+  return {
+    cues,
+    frictionNotes,
+    reflection,
+    passiveSignals,
+    isLoadingCues,
+    isLoadingReflection,
+    cuesError: cuesError ?? passiveSignalsError,
+    refreshCues,
+  };
 }
 
 export function useKairosCues(targetDate: string): KairosCuesActions {
   const [weekStart, setWeekStart] = useState<string>(() => getMondayOfWeek(targetDate));
   const [cueMutationError, setCueMutationError] = useState<string | null>(null);
-  const queryState = useCueQueries(weekStart);
+  const queryState = useCueQueries(targetDate, weekStart);
 
   const runMutation = useCallback(
     async (op: () => Promise<unknown>) => {

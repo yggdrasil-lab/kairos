@@ -78,7 +78,10 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(page.getByTestId('now-next-upcoming')).toContainText('Design Review Sync');
       await expect(page.getByTestId('active-zone-chain-card')).toBeVisible();
       await expect(page.getByTestId('active-zone-chain-card')).toContainText('Kitchen -> Desk');
-      await expect(page.getByTestId('active-zone-chain-card')).toContainText('Fill water bottle at kitchen bench');
+      await expect(page.getByTestId('active-zone-chain-card')).toContainText('Step on scale beside bathroom door');
+      await expect(page.getByTestId('active-zone-chain-card').getByTestId('passive-signal-observed')).toContainText('Weighed in 07:15 (72.4 kg)');
+      await expect(page.getByTestId('active-zone-chain-card')).toContainText('Fasted Walk 40m (Eir)');
+      await expect(page.getByTestId('active-zone-chain-card')).not.toContainText(/missed|streak/i);
 
       await page.screenshot({
         path: `screenshots/${platform}/01-now-cockpit.png`,
@@ -123,6 +126,15 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(page.getByTestId('all-day-commitments')).toContainText('Release Freeze Window');
       await expect(page.getByTestId('today-timeline')).toContainText('Conflict');
 
+      const hydratedWorkoutSlice = page.getByTestId('timeline-slice-grid-4-0');
+      await expect(hydratedWorkoutSlice.getByTestId('hydrated-workout-badge')).toContainText('Kratos: Lower Strength & Mobility');
+
+      const kratosSessionSlice = page.getByTestId('timeline-slice-commitment-103');
+      await expect(kratosSessionSlice).toContainText('Morning Swim (Kratos)');
+      await expect(kratosSessionSlice).toContainText('Kratos');
+      await expect(kratosSessionSlice.getByRole('button', { name: /edit/i })).toHaveCount(0);
+      await expect(kratosSessionSlice.getByRole('button', { name: /delete/i })).toHaveCount(0);
+
       await page.screenshot({
         path: `screenshots/${platform}/02-today-timeline.png`,
         fullPage: platform === 'desktop',
@@ -164,6 +176,14 @@ for (const { name: platform, options } of PLATFORMS) {
       }
       await expect(page.getByTestId('cue-catalog-view')).toBeVisible();
       await expect(page.getByTestId('cue-catalog-view')).toContainText('Kitchen -> Desk');
+      await expect(page.getByTestId('cue-catalog-view').getByTestId('passive-signal-observed')).toHaveCount(2);
+      await expect(page.getByTestId('cue-catalog-view')).toContainText('Weighed in 07:15 (72.4 kg)');
+      await expect(page.getByTestId('cue-catalog-view')).toContainText('Swim 1500m logged');
+      await expect(page.getByTestId('cue-catalog-view')).toContainText('Fasted Walk 40m (Eir)');
+      await expect(page.getByTestId('cue-catalog-view')).toContainText('Monthly Financial Check-in (Plutus)');
+      for (const cueId of [1, 2, 3, 4]) {
+        await expect(page.getByTestId(`habit-cue-${cueId}`)).not.toContainText(/missed|streak/i);
+      }
 
       await page.screenshot({
         path: `screenshots/${platform}/06-cues-catalog.png`,
@@ -217,6 +237,27 @@ for (const { name: platform, options } of PLATFORMS) {
         const text = await page.getByTestId('today-timeline').textContent();
         return text?.includes('Afternoon Sync') ?? false;
       }).toBe(true);
+    });
+
+    test(`verifies active workout hydration and day-header fallback pill on ${platform}`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date('2026-11-25T09:30:00+13:00'));
+      await setupKairosMockApi(page, { activeWorkoutNow: true, dayHeaderFallback: true });
+      await page.goto('/?tab=now');
+
+      await expect(page.getByTestId('now-next-hero')).toContainText('Morning Workout');
+      await expect(page.getByTestId('now-next-hero').getByTestId('hydrated-workout-badge')).toContainText(
+        'Kratos: Lower Strength & Mobility'
+      );
+      await expect(page.getByTestId('now-next-hero').getByTestId('kratos-day-header-pill')).toContainText(
+        'Upper Push Focus'
+      );
+
+      if (platform !== 'desktop') {
+        await page.getByRole('button', { name: 'Today' }).click();
+      }
+      await expect(page.getByTestId('all-day-commitments').getByTestId('kratos-day-header-pill')).toContainText(
+        'Upper Push Focus'
+      );
     });
   });
 }

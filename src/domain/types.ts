@@ -87,6 +87,7 @@ export interface Commitment {
   urgent_quiet_bypass: boolean;
   notes: string | null;
   has_conflict: boolean;
+  read_only?: boolean;
 }
 
 export interface CommitmentCreate {
@@ -113,6 +114,33 @@ export interface CommitmentUpdate {
   notes?: string | null;
 }
 
+export type HydratedWorkoutPlacement = 'grid_block' | 'day_header';
+
+export interface HydratedWorkout {
+  title: string;
+  workout_type: string | null;
+  emphasis: string | null;
+  notes: string | null;
+  attached_grid_block_id: number | null;
+  placement: HydratedWorkoutPlacement;
+}
+
+export interface CompletedKratosSession {
+  external_ref: string;
+  title: string;
+  activity_type: string | null;
+  start_minute: number;
+  end_minute: number;
+  started_at: string;
+  ended_at: string;
+}
+
+export interface DayWorkoutHydration {
+  planned_workout: HydratedWorkout | null;
+  completed_sessions: CompletedKratosSession[];
+  peer_degraded: boolean;
+}
+
 export interface ResolvedSlice {
   slice_id: string;
   kind: SliceKind;
@@ -129,6 +157,8 @@ export interface ResolvedSlice {
   suppressed_tail: boolean;
   extension_count: number;
   notes: string | null;
+  hydrated_workout?: HydratedWorkout | null;
+  read_only?: boolean;
 }
 
 export interface DaySchedule {
@@ -137,6 +167,7 @@ export interface DaySchedule {
   all_day_commitments: Commitment[];
   timed_commitments: Commitment[];
   has_conflicts: boolean;
+  workout_hydration?: DayWorkoutHydration | null;
 }
 
 export interface NowNextState {
@@ -147,6 +178,7 @@ export interface NowNextState {
   upcoming: ResolvedSlice[];
   open_time_minutes: number | null;
   is_quiet_hours: boolean;
+  workout_hydration?: DayWorkoutHydration | null;
 }
 
 export interface KairosCockpitData {
@@ -270,4 +302,22 @@ export interface ScheduleExtendRequest {
 export interface ScheduleExtendResponse {
   extended_exception: GridException;
   trimmed_exceptions: GridException[];
+}
+
+export type PassiveSignalSource = 'eir' | 'kratos' | 'plutus';
+
+export interface PassiveSignalStatus {
+  rule_key: string;
+  label: string;
+  observed: boolean;
+  fact_label: string | null;
+  observed_at: string | null;
+  source: PassiveSignalSource;
+  peer_available: boolean;
+}
+
+export interface PassiveSignalsResponse {
+  target_date: string;
+  signals: Record<string, PassiveSignalStatus>;
+  degraded_peers: string[];
 }

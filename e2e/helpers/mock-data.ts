@@ -1,16 +1,25 @@
 import type { Page, Route } from '@playwright/test';
 import type {
   Commitment,
+  CompletedKratosSession,
   DaySchedule,
+  DayWorkoutHydration,
   FrictionNote,
   FrictionTag,
   GridBlock,
   GridException,
   HabitCue,
+  HydratedWorkout,
   NowNextState,
+  PassiveSignalsResponse,
   ResolvedSlice,
   WeeklyReflection,
 } from '../../src/domain/types';
+
+export interface MockApiOptions {
+  dayHeaderFallback?: boolean;
+  activeWorkoutNow?: boolean;
+}
 
 const TARGET_DATE = '2026-11-25';
 const NOW_MINUTE = 570; // 09:30
@@ -29,23 +38,98 @@ const INITIAL_WEEKLY_GRID: GridBlock[] = [
 const INITIAL_COMMITMENTS: Commitment[] = [
   { id: 101, title: 'Release Freeze Window', target_date: TARGET_DATE, start_minute: null, end_minute: null, all_day: true, source: 'iris', external_ref: 'cal-all-day-101', nudge_mode: 'none', urgent_quiet_bypass: false, notes: 'Production change window', has_conflict: false },
   { id: 102, title: 'Design Review Sync', target_date: TARGET_DATE, start_minute: 600, end_minute: 708, all_day: false, source: 'iris', external_ref: 'cal-102', nudge_mode: 'boundary', urgent_quiet_bypass: false, notes: 'Carves Wednesday Deep Work leaving <15m tail suppressed', has_conflict: true },
-  { id: 103, title: 'Physio Check-In', target_date: TARGET_DATE, start_minute: 660, end_minute: 720, all_day: false, source: 'kratos', external_ref: 'kratos-103', nudge_mode: 'two-stage', urgent_quiet_bypass: false, notes: 'Overlaps Design Review Sync', has_conflict: true },
+  { id: 103, title: 'Morning Swim (Kratos)', target_date: TARGET_DATE, start_minute: 420, end_minute: 465, all_day: false, source: 'kratos', external_ref: 'kratos-session-401', nudge_mode: 'none', urgent_quiet_bypass: false, notes: '1500m aerobic swim', has_conflict: false, read_only: true },
+  { id: 104, title: 'Architecture Sync', target_date: TARGET_DATE, start_minute: 660, end_minute: 720, all_day: false, source: 'manual', external_ref: null, nudge_mode: 'two-stage', urgent_quiet_bypass: false, notes: 'Overlaps Design Review Sync', has_conflict: true },
+];
+
+const PLANNED_GRID_WORKOUT: HydratedWorkout = {
+  title: 'Lower Strength & Mobility',
+  workout_type: 'strength',
+  emphasis: 'Squat + Hip Mobility',
+  notes: 'RPE 7 steady',
+  attached_grid_block_id: 4,
+  placement: 'grid_block',
+};
+
+const PLANNED_DAY_HEADER_WORKOUT: HydratedWorkout = {
+  title: 'Upper Push Focus',
+  workout_type: 'strength',
+  emphasis: 'Press + Core',
+  notes: 'Warm up shoulders first',
+  attached_grid_block_id: null,
+  placement: 'day_header',
+};
+
+const COMPLETED_KRATOS_SESSIONS: CompletedKratosSession[] = [
+  {
+    external_ref: 'kratos-session-401',
+    title: 'Morning Swim (Kratos)',
+    activity_type: 'swim',
+    start_minute: 420,
+    end_minute: 465,
+    started_at: '2026-11-25T07:00:00+13:00',
+    ended_at: '2026-11-25T07:45:00+13:00',
+  },
 ];
 
 const INITIAL_GRID_SLICES: ResolvedSlice[] = [
   { slice_id: 'grid-3-0', kind: 'grid_block', source_id: 3, title: 'Wednesday Deep Work', start_minute: 540, end_minute: 600, category: 'deep_work', source: null, nudge_mode: 'two-stage', flexible: false, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: true, extension_count: 0, notes: 'Carved before 10:00 sync (<15m tail after 11:48 suppressed)' },
-  { slice_id: 'grid-4-0', kind: 'grid_block', source_id: 4, title: 'Evening Mobility', start_minute: 1050, end_minute: 1110, category: 'health', source: null, nudge_mode: 'boundary', flexible: true, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: false, extension_count: 0, notes: 'Stretch and zone 2 walk' },
+  { slice_id: 'grid-4-0', kind: 'grid_block', source_id: 4, title: 'Evening Mobility', start_minute: 1050, end_minute: 1110, category: 'health', source: null, nudge_mode: 'boundary', flexible: true, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: false, extension_count: 0, notes: 'Stretch and zone 2 walk', hydrated_workout: PLANNED_GRID_WORKOUT },
 ];
 
 const INITIAL_CUES: Omit<HabitCue, 'recent_friction'>[] = [
-  { id: 1, title: 'Fill water bottle at kitchen bench', zone_chain: 'Kitchen -> Desk', chain_order: 1, passive_rule: 'eir_hydration_logged', active: true, notes: 'Keep bottle beside kettle', grid_block_ids: [1, 3] },
-  { id: 2, title: 'Place phone in hallway tray & open IDE', zone_chain: 'Kitchen -> Desk', chain_order: 2, passive_rule: null, active: true, notes: 'No browser tabs before sprint notes', grid_block_ids: [1, 3] },
-  { id: 3, title: 'Roll out mat beside desk', zone_chain: 'Desk -> Living Room', chain_order: 1, passive_rule: 'kratos_workout_logged', active: true, notes: 'Leave foam roller visible', grid_block_ids: [4] },
+  { id: 1, title: 'Step on scale beside bathroom door', zone_chain: 'Kitchen -> Desk', chain_order: 1, passive_rule: 'eir_morning_weigh_in', active: true, notes: 'Keep bottle beside kettle', grid_block_ids: [1, 3] },
+  { id: 2, title: 'Lace up walking shoes before coffee', zone_chain: 'Kitchen -> Desk', chain_order: 2, passive_rule: 'eir_fasted_walk_40m', active: true, notes: 'No browser tabs before sprint notes', grid_block_ids: [1, 3] },
+  { id: 3, title: 'Roll out mat beside desk', zone_chain: 'Desk -> Living Room', chain_order: 1, passive_rule: 'kratos_workout_completed', active: true, notes: 'Leave foam roller visible', grid_block_ids: [4] },
+  { id: 4, title: 'Review monthly cashflow sheet', zone_chain: 'Weekly Finance', chain_order: 1, passive_rule: 'plutus_monthly_checkin', active: true, notes: 'Open Plutus summary tab', grid_block_ids: [6] },
 ];
 
+const INITIAL_PASSIVE_SIGNALS: PassiveSignalsResponse = {
+  target_date: TARGET_DATE,
+  signals: {
+    eir_morning_weigh_in: {
+      rule_key: 'eir_morning_weigh_in',
+      label: 'Morning Weigh-in (Eir)',
+      observed: true,
+      fact_label: 'Weighed in 07:15 (72.4 kg)',
+      observed_at: '2026-11-25T07:15:00+13:00',
+      source: 'eir',
+      peer_available: true,
+    },
+    eir_fasted_walk_40m: {
+      rule_key: 'eir_fasted_walk_40m',
+      label: 'Fasted Walk 40m (Eir)',
+      observed: false,
+      fact_label: null,
+      observed_at: null,
+      source: 'eir',
+      peer_available: true,
+    },
+    kratos_workout_completed: {
+      rule_key: 'kratos_workout_completed',
+      label: 'Workouts / Swimming (Kratos)',
+      observed: true,
+      fact_label: 'Swim 1500m logged',
+      observed_at: '2026-11-25T07:45:00+13:00',
+      source: 'kratos',
+      peer_available: true,
+    },
+    plutus_monthly_checkin: {
+      rule_key: 'plutus_monthly_checkin',
+      label: 'Monthly Financial Check-in (Plutus)',
+      observed: false,
+      fact_label: null,
+      observed_at: null,
+      source: 'plutus',
+      peer_available: true,
+    },
+  },
+  degraded_peers: [],
+};
+
 const INITIAL_FRICTION_NOTES: FrictionNote[] = [
-  { id: 501, target_date: '2026-11-24', tag: 'environment_missing', note: 'Water bottle was left in gym bag overnight', habit_cue_id: 1, grid_block_id: 3, cue_title: 'Fill water bottle at kitchen bench', block_title: 'Wednesday Deep Work', created_at: '2026-11-24T09:05:00+13:00' },
-  { id: 502, target_date: '2026-11-23', tag: 'schedule_overrun', note: 'Morning standup ran 20m past anchor start', habit_cue_id: 2, grid_block_id: 1, cue_title: 'Place phone in hallway tray & open IDE', block_title: 'Monday Deep Work', created_at: '2026-11-23T09:25:00+13:00' },
+  { id: 501, target_date: '2026-11-24', tag: 'environment_missing', note: 'Running shoes were left in boot of car', habit_cue_id: 1, grid_block_id: 3, cue_title: 'Step on scale beside bathroom door', block_title: 'Wednesday Deep Work', created_at: '2026-11-24T09:05:00+13:00' },
+  { id: 502, target_date: '2026-11-23', tag: 'schedule_overrun', note: 'Morning standup ran 20m past anchor start', habit_cue_id: 2, grid_block_id: 1, cue_title: 'Lace up walking shoes before coffee', block_title: 'Monday Deep Work', created_at: '2026-11-23T09:25:00+13:00' },
 ];
 
 interface MockStore {
@@ -56,6 +140,7 @@ interface MockStore {
   cues: Omit<HabitCue, 'recent_friction'>[];
   frictionNotes: FrictionNote[];
   pushSubscriptions: string[];
+  workoutHydration: DayWorkoutHydration;
   nextId: number;
 }
 
@@ -127,6 +212,7 @@ function toCommitmentSlice(item: Commitment): ResolvedSlice {
     suppressed_tail: false,
     extension_count: 0,
     notes: item.notes,
+    read_only: item.read_only,
   };
 }
 
@@ -142,15 +228,35 @@ function buildNowNextPayload(store: MockStore): NowNextState {
   const activeItems = slices.filter((s) => s.start_minute <= NOW_MINUTE && NOW_MINUTE < s.end_minute);
   const upcoming = slices.filter((s) => s.start_minute > NOW_MINUTE);
   const openTime = activeItems.length === 0 && upcoming[0] ? upcoming[0].start_minute - NOW_MINUTE : null;
-  return { target_date: TARGET_DATE, now_minute: NOW_MINUTE, active_slice: activeItems[0] ?? null, active_items: activeItems, upcoming, open_time_minutes: openTime, is_quiet_hours: false };
+  return {
+    target_date: TARGET_DATE,
+    now_minute: NOW_MINUTE,
+    active_slice: activeItems[0] ?? null,
+    active_items: activeItems,
+    upcoming,
+    open_time_minutes: openTime,
+    is_quiet_hours: false,
+    workout_hydration: store.workoutHydration,
+  };
 }
 
 function buildDayPayload(store: MockStore): DaySchedule {
   const slices = buildSlices(store);
-  return { target_date: TARGET_DATE, slices, all_day_commitments: store.commitments.filter((c) => c.all_day), timed_commitments: store.commitments.filter((c) => !c.all_day), has_conflicts: slices.some((s) => s.has_conflict) };
+  return {
+    target_date: TARGET_DATE,
+    slices,
+    all_day_commitments: store.commitments.filter((c) => c.all_day),
+    timed_commitments: store.commitments.filter((c) => !c.all_day),
+    has_conflicts: slices.some((s) => s.has_conflict),
+    workout_hydration: store.workoutHydration,
+  };
 }
 
 async function handleCueRoutes(route: Route, store: MockStore, path: string, method: string, url: URL): Promise<boolean> {
+  if (path === '/cues/passive-signals' && method === 'GET') {
+    await route.fulfill({ json: INITIAL_PASSIVE_SIGNALS });
+    return true;
+  }
   if (path === '/cues' && method === 'GET') {
     const activeOnly = url.searchParams.get('active_only') === 'true';
     const blockIdParam = url.searchParams.get('grid_block_id');
@@ -378,15 +484,36 @@ async function handleCommitmentMutation(route: Route, store: MockStore, path: st
   await route.fulfill({ status: 404, json: { detail: `Unhandled mock route: ${method} ${path}` } });
 }
 
-export async function setupKairosMockApi(page: Page): Promise<void> {
+export async function setupKairosMockApi(
+  page: Page,
+  options: MockApiOptions = {}
+): Promise<void> {
+  const gridSlices = INITIAL_GRID_SLICES.map((s) => ({ ...s }));
+  if (options.activeWorkoutNow) {
+    gridSlices[0] = {
+      ...gridSlices[0],
+      title: 'Morning Workout',
+      category: 'health',
+      hydrated_workout: { ...PLANNED_GRID_WORKOUT, attached_grid_block_id: 3 },
+    };
+  }
+  const plannedWorkout = options.dayHeaderFallback
+    ? { ...PLANNED_DAY_HEADER_WORKOUT }
+    : { ...PLANNED_GRID_WORKOUT };
+
   const store: MockStore = {
     weeklyGrid: INITIAL_WEEKLY_GRID.map((b) => ({ ...b })),
-    gridSlices: INITIAL_GRID_SLICES.map((s) => ({ ...s })),
+    gridSlices,
     commitments: INITIAL_COMMITMENTS.map((c) => ({ ...c })),
     exceptions: [],
     cues: INITIAL_CUES.map((c) => ({ ...c, grid_block_ids: [...c.grid_block_ids] })),
     frictionNotes: INITIAL_FRICTION_NOTES.map((n) => ({ ...n })),
     pushSubscriptions: [],
+    workoutHydration: {
+      planned_workout: plannedWorkout,
+      completed_sessions: COMPLETED_KRATOS_SESSIONS.map((s) => ({ ...s })),
+      peer_degraded: false,
+    },
     nextId: 600,
   };
   await page.route('**/api/**', (route) => handleApiRoute(route, store));

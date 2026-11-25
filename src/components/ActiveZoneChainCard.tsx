@@ -1,17 +1,18 @@
 import React from 'react';
 import { Compass, MessageSquarePlus } from 'lucide-react';
-import { Button, GlassCard, StatusBadge } from '@yggdrasil-lab/ui';
+import { Button, GlassCard } from '@yggdrasil-lab/ui';
 import {
-  formatPassiveRuleLabel,
   getActiveCuesForGridBlock,
   type ZoneChainGroup,
 } from '../domain/cues';
-import type { HabitCue, ResolvedSlice } from '../domain/types';
+import type { HabitCue, PassiveSignalStatus, ResolvedSlice } from '../domain/types';
 import type { FrictionModalContext } from '../hooks/useCockpitModals';
+import { PassiveSignalBadge } from './PassiveSignalBadge';
 
 export interface ActiveZoneChainCardProps {
   activeSlice: ResolvedSlice | null;
   cues: HabitCue[];
+  passiveSignals?: Record<string, PassiveSignalStatus>;
   onLogFriction: (context: Partial<FrictionModalContext>) => void;
 }
 
@@ -19,9 +20,9 @@ const ZoneCueRow: React.FC<{
   cue: HabitCue;
   blockId: number;
   blockTitle: string;
+  passiveSignals?: Record<string, PassiveSignalStatus>;
   onLogFriction: (context: Partial<FrictionModalContext>) => void;
-}> = ({ cue, blockId, blockTitle, onLogFriction }) => {
-  const passiveLabel = formatPassiveRuleLabel(cue.passive_rule);
+}> = ({ cue, blockId, blockTitle, passiveSignals, onLogFriction }) => {
   return (
     <div
       data-testid={`active-zone-cue-${cue.id}`}
@@ -33,9 +34,7 @@ const ZoneCueRow: React.FC<{
             #{cue.chain_order}
           </span>
           <span className="text-sm font-medium text-slate-100 break-words">{cue.title}</span>
-          {Boolean(passiveLabel) && (
-            <StatusBadge label={passiveLabel as string} variant="idle" size="xs" />
-          )}
+          <PassiveSignalBadge passiveRule={cue.passive_rule} passiveSignals={passiveSignals} />
         </div>
         {Boolean(cue.notes) && (
           <p className="text-xs text-slate-400 break-words">{cue.notes}</p>
@@ -66,8 +65,9 @@ const ZoneChainGroupSection: React.FC<{
   group: ZoneChainGroup;
   blockId: number;
   blockTitle: string;
+  passiveSignals?: Record<string, PassiveSignalStatus>;
   onLogFriction: (context: Partial<FrictionModalContext>) => void;
-}> = ({ group, blockId, blockTitle, onLogFriction }) => (
+}> = ({ group, blockId, blockTitle, passiveSignals, onLogFriction }) => (
   <div className="space-y-2">
     <div className="text-[11px] font-semibold uppercase tracking-wider text-accent/90">
       {group.zoneChain}
@@ -79,6 +79,7 @@ const ZoneChainGroupSection: React.FC<{
           cue={cue}
           blockId={blockId}
           blockTitle={blockTitle}
+          passiveSignals={passiveSignals}
           onLogFriction={onLogFriction}
         />
       ))}
@@ -89,6 +90,7 @@ const ZoneChainGroupSection: React.FC<{
 export const ActiveZoneChainCard: React.FC<ActiveZoneChainCardProps> = ({
   activeSlice,
   cues,
+  passiveSignals,
   onLogFriction,
 }) => {
   if (!activeSlice || activeSlice.kind !== 'grid_block') {
@@ -139,6 +141,7 @@ export const ActiveZoneChainCard: React.FC<ActiveZoneChainCardProps> = ({
               group={group}
               blockId={activeSlice.source_id}
               blockTitle={activeSlice.title}
+              passiveSignals={passiveSignals}
               onLogFriction={onLogFriction}
             />
           ))}
