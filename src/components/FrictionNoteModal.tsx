@@ -26,7 +26,7 @@ const ContextSummaryBanner: React.FC<{ context: FrictionModalContext | null }> =
     return null;
   }
   return (
-    <div className="rounded-xl border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-xs text-slate-200 space-y-0.5">
+    <div className="rounded-xl border border-accent/25 bg-accent/10 px-3 py-2 text-xs text-slate-200 space-y-0.5">
       {Boolean(context.cueTitle) && (
         <div>
           <span className="text-slate-400">Cue: </span>
@@ -51,7 +51,7 @@ const FrictionNoteFooter: React.FC<{
     <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={onClose} className="min-h-[44px] sm:min-h-[36px]">
       Cancel
     </Button>
-    <Button type="submit" form="friction-note-form" variant="blue" size="sm" loading={submitting} data-testid="friction-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
+    <Button type="submit" form="friction-note-form" variant="brand" size="sm" loading={submitting} data-testid="friction-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
       Save Note
     </Button>
   </div>
@@ -83,10 +83,10 @@ const FrictionNoteFormBody: React.FC<{
       }))}
     />
     <FormField label="1-Line Observation" htmlFor="friction-note-input" required>
-      <TextInput id="friction-note-input" data-testid="friction-note-input" variant="blue" value={note} onChange={(e) => onChangeNote(e.target.value)} placeholder="e.g. Bottle was still in the dishwasher" required />
+      <TextInput id="friction-note-input" data-testid="friction-note-input" variant="brand" value={note} onChange={(e) => onChangeNote(e.target.value)} placeholder="e.g. Bottle was still in the dishwasher" required />
     </FormField>
     <FormField label="Date" htmlFor="friction-date-input">
-      <TextInput id="friction-date-input" variant="blue" type="date" value={targetDate} onChange={(e) => onChangeDate(e.target.value)} />
+      <TextInput id="friction-date-input" variant="brand" type="date" value={targetDate} onChange={(e) => onChangeDate(e.target.value)} />
     </FormField>
   </form>
 );
@@ -138,7 +138,7 @@ export const FrictionNoteModal: React.FC<FrictionNoteModalProps> = ({
       onClose={onClose}
       title="Log Friction Observation"
       subtitle="Capture what got in the way so Sunday reflection stays factual and calm."
-      headerIcon={<MessageSquarePlus className="w-5 h-5 text-sky-400" />}
+      headerIcon={<MessageSquarePlus className="w-5 h-5 text-accent" />}
       footer={<FrictionNoteFooter submitting={submitting} onClose={onClose} />}
     >
       <FrictionNoteFormBody context={context} error={validationError || error} tag={tag} note={note} targetDate={targetDate} onChangeTag={setTag} onChangeNote={setNote} onChangeDate={setTargetDate} onSubmit={handleSubmit} />

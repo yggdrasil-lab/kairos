@@ -36,7 +36,7 @@ export const CuesWorkspace: React.FC<CuesWorkspaceProps> = ({
           options={CUES_SUBTABS}
           value={subTab}
           onChange={setSubTab}
-          variant="blue"
+          variant="brand"
           size="sm"
           idPrefix="cues-subtab"
         />

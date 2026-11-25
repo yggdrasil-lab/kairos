@@ -96,7 +96,7 @@ const CockpitBody: React.FC<{
           options={DESKTOP_TABS}
           value={desktopTab}
           onChange={onChangeDesktopTab}
-          variant="blue"
+          variant="brand"
           size="sm"
           idPrefix="desktop-tab"
         />
@@ -204,14 +204,14 @@ export const App: React.FC = () => {
       header={
         <AppHeader
           brandInitial="K"
-          variant="blue"
+          variant="brand"
           title="Kairos"
           subtitle="Focus Cockpit"
           isRefreshing={schedule.isRefreshing || cuesState.isLoadingCues}
           onRefresh={handleRefresh}
           actions={
             <Button
-              variant="blue"
+              variant="brand"
               size="sm"
               data-testid="header-add-btn"
               icon={<Plus className="w-4 h-4" />}
@@ -228,7 +228,7 @@ export const App: React.FC = () => {
           tabs={MOBILE_TABS}
           activeTab={mobileTab}
           onChangeTab={(id) => setMobileTab(id as CockpitMobileTab)}
-          variant="blue"
+          variant="brand"
           hideOnDesktop
         />
       }
@@ -239,7 +239,7 @@ export const App: React.FC = () => {
         onRefresh={handleRefresh}
       />
       {schedule.state.status === 'loading' && (
-        <LoadingState label="Resolving schedule..." variant="blue" />
+        <LoadingState label="Resolving schedule..." variant="brand" />
       )}
       {schedule.state.status === 'ready' && (
         <CockpitBody

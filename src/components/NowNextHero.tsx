@@ -31,7 +31,7 @@ const HeroBadgeRow: React.FC<{
       {suppressedTail && <StatusBadge label="<15m Tail Suppressed" variant="warning" size="xs" />}
     </div>
     <div className="flex items-center gap-1.5 text-xs font-mono text-slate-400">
-      <Clock className="w-3.5 h-3.5 text-sky-400" />
+      <Clock className="w-3.5 h-3.5 text-accent" />
       <span>{targetDate}</span>
     </div>
   </div>
@@ -59,10 +59,10 @@ const ActiveSliceContent: React.FC<{ slice: ResolvedSlice; nowMinute: number }> 
           <StatusBadge label={categoryMeta.label} variant={categoryMeta.badgeVariant} size="xs" />
         )}
       </div>
-      <ProgressBar value={progress.percent} tone={slice.has_conflict ? 'rose' : 'blue'} size="md" label="Active slice progress" />
+      <ProgressBar value={progress.percent} tone={slice.has_conflict ? 'rose' : 'brand'} size="md" label="Active slice progress" />
       <div className="flex items-center justify-between text-xs text-slate-300 font-mono">
         <span>{formatDuration(progress.elapsedMinutes)} elapsed</span>
-        <span className="text-sky-300 font-semibold">{formatDuration(progress.remainingMinutes)} remaining</span>
+        <span className="text-accent font-semibold">{formatDuration(progress.remainingMinutes)} remaining</span>
       </div>
     </div>
   );
@@ -75,7 +75,7 @@ const OpenTimeContent: React.FC<{ openMinutes: number | null; onAddCommitment: (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-1">
     <div className="space-y-1">
       <div className="flex items-center gap-2 text-slate-100">
-        <Sparkles className="w-5 h-5 text-sky-400 shrink-0" />
+        <Sparkles className="w-5 h-5 text-accent shrink-0" />
         <h2 className="text-xl sm:text-2xl font-bold">Open Time</h2>
       </div>
       <p className="text-xs sm:text-sm text-slate-400">
@@ -85,7 +85,7 @@ const OpenTimeContent: React.FC<{ openMinutes: number | null; onAddCommitment: (
       </p>
     </div>
     <Button
-      variant="blue"
+      variant="brand"
       size="sm"
       icon={<Plus className="w-4 h-4" />}
       onClick={onAddCommitment}
@@ -135,7 +135,7 @@ const UpcomingPreview: React.FC<{ nextSlice: ResolvedSlice | undefined; nowMinut
       </div>
       <div className="flex items-center gap-2 font-mono text-slate-400">
         <span>{formatMinuteRange(nextSlice.start_minute, nextSlice.end_minute)}</span>
-        <span className="text-sky-400 font-semibold">in {formatDuration(startsIn)}</span>
+        <span className="text-secondary font-semibold">in {formatDuration(startsIn)}</span>
       </div>
     </div>
   );
@@ -147,7 +147,7 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({ nowNext, onAddCommitme
   const suppressedTail = Boolean(active?.suppressed_tail);
 
   return (
-    <GlassCard data-testid="now-next-hero" className="space-y-4 border-sky-500/25">
+    <GlassCard data-testid="now-next-hero" className="space-y-4 border-accent/25">
       <HeroBadgeRow
         hasActive={Boolean(active)}
         isQuietHours={nowNext.is_quiet_hours}

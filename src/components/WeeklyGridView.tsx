@@ -49,7 +49,7 @@ const GridBlockCard: React.FC<{
   return (
     <div data-testid={`grid-block-${block.id}`} className={`rounded-xl border p-2.5 space-y-2 transition-opacity ${stateClass}`}>
       <div className="space-y-1">
-        <div className="text-[11px] font-mono font-semibold text-sky-300">{formatMinuteRange(block.start_minute, block.end_minute)}</div>
+        <div className="text-[11px] font-mono font-semibold text-accent">{formatMinuteRange(block.start_minute, block.end_minute)}</div>
         <div className="text-xs font-semibold text-slate-100 leading-snug break-words">{block.title}</div>
       </div>
       <div className="flex flex-wrap items-center gap-1">
@@ -78,7 +78,7 @@ const MobileDayPanel: React.FC<{
         {WEEKDAYS.map((day) => {
           const isSelected = day.dayOfWeek === selectedDay;
           const pillStyle = isSelected
-            ? 'bg-sky-500/20 text-sky-300 border-sky-500/50'
+            ? 'bg-accent/20 text-accent border-accent/50'
             : 'bg-background/60 text-slate-400 border-border/80 hover:text-slate-200';
           return (
             <button key={day.dayOfWeek} type="button" role="tab" aria-selected={isSelected} data-testid={`week-day-pill-${day.dayOfWeek}`} onClick={() => onSelectDay(day.dayOfWeek)} className={`min-h-[44px] rounded-xl text-xs font-semibold border transition-colors flex flex-col items-center justify-center ${pillStyle}`}>
@@ -118,7 +118,7 @@ const DesktopDayColumn: React.FC<{
   <div data-testid={`week-column-${dayOfWeek}`} className="rounded-xl border border-border/70 bg-background/40 p-2.5 space-y-2 flex flex-col">
     <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
       <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">{short}</span>
-      <button type="button" aria-label={`Add block for ${label}`} onClick={() => onAddBlock(dayOfWeek)} className="p-1 rounded-lg text-slate-400 hover:text-sky-300 hover:bg-sky-500/10 transition-colors">
+      <button type="button" aria-label={`Add block for ${label}`} onClick={() => onAddBlock(dayOfWeek)} className="p-1 rounded-lg text-slate-400 hover:text-accent hover:bg-accent/10 transition-colors">
         <Plus className="w-3.5 h-3.5" />
       </button>
     </div>
@@ -150,9 +150,9 @@ export const WeeklyGridView: React.FC<WeeklyGridViewProps> = ({
         title="Mon-Sun Weekly Grid"
         subtitle="Ideal recurring anchor blocks carved automatically by commitments"
         icon={<Grid className="w-4 h-4" />}
-        variant="blue"
+        variant="brand"
         actions={
-          <Button variant="blue" size="xs" data-testid="add-grid-block-btn" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => onAddBlock(selectedDay)} className="min-h-[44px] sm:min-h-[32px]">
+          <Button variant="brand" size="xs" data-testid="add-grid-block-btn" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => onAddBlock(selectedDay)} className="min-h-[44px] sm:min-h-[32px]">
             Add Grid Block
           </Button>
         }
