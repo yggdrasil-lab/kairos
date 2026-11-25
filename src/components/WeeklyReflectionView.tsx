@@ -143,6 +143,57 @@ const ReflectionSections: React.FC<{
   </div>
 );
 
+const ReflectionHeaderActions: React.FC<{
+  weekStart: string;
+  onChangeWeekStart: (nextWeekStart: string) => void;
+  onLogFriction: () => void;
+}> = ({ weekStart, onChangeWeekStart, onLogFriction }) => (
+  <div className="flex items-center gap-1.5">
+    <Button variant="secondary" size="xs" aria-label="Previous week" data-testid="reflection-prev-week" onClick={() => onChangeWeekStart(shiftIsoDate(weekStart, -7))} className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] justify-center">
+      <ChevronLeft className="w-4 h-4" />
+    </Button>
+    <Button variant="secondary" size="xs" aria-label="Next week" data-testid="reflection-next-week" onClick={() => onChangeWeekStart(shiftIsoDate(weekStart, 7))} className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] justify-center">
+      <ChevronRight className="w-4 h-4" />
+    </Button>
+    <Button variant="blue" size="xs" data-testid="reflection-log-friction-btn" icon={<MessageSquarePlus className="w-3.5 h-3.5" />} onClick={onLogFriction} className="min-h-[44px] sm:min-h-[32px]">
+      Log Note
+    </Button>
+  </div>
+);
+
+const ReflectionBody: React.FC<{
+  reflection: WeeklyReflection | null;
+  isLoading: boolean;
+  onLogFriction: () => void;
+  onDeleteFrictionNote: (noteId: number) => void;
+}> = ({ reflection, isLoading, onLogFriction, onDeleteFrictionNote }) => {
+  if (isLoading && !reflection) {
+    return <LoadingState label="Loading weekly reflection..." variant="blue" />;
+  }
+  if (!reflection || reflection.total_notes === 0) {
+    return (
+      <EmptyState
+        title="Quiet week logged"
+        description="No friction observations recorded for this week yet. Log a quick note whenever a cue or block transition feels sticky."
+        action={<Button variant="blue" size="sm" onClick={onLogFriction} className="min-h-[44px]">Log Observation</Button>}
+      />
+    );
+  }
+  return (
+    <>
+      <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="text-slate-300">
+          {reflection.total_notes} calm {reflection.total_notes === 1 ? 'observation' : 'observations'} captured for review
+        </span>
+        <span className="font-mono text-sky-300">
+          {reflection.by_cue.length} cues / {reflection.by_tag.length} patterns
+        </span>
+      </div>
+      <ReflectionSections reflection={reflection} onDeleteFrictionNote={onDeleteFrictionNote} />
+    </>
+  );
+};
+
 export const WeeklyReflectionView: React.FC<WeeklyReflectionViewProps> = ({
   weekStart,
   reflection,
@@ -162,70 +213,9 @@ export const WeeklyReflectionView: React.FC<WeeklyReflectionViewProps> = ({
         subtitle={`Friction patterns for ${weekRangeLabel}`}
         icon={<Sparkles className="w-4 h-4" />}
         variant="blue"
-        actions={
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="secondary"
-              size="xs"
-              aria-label="Previous week"
-              data-testid="reflection-prev-week"
-              onClick={() => onChangeWeekStart(shiftIsoDate(weekStart, -7))}
-              className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] justify-center"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="xs"
-              aria-label="Next week"
-              data-testid="reflection-next-week"
-              onClick={() => onChangeWeekStart(shiftIsoDate(weekStart, 7))}
-              className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] justify-center"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="blue"
-              size="xs"
-              data-testid="reflection-log-friction-btn"
-              icon={<MessageSquarePlus className="w-3.5 h-3.5" />}
-              onClick={onLogFriction}
-              className="min-h-[44px] sm:min-h-[32px]"
-            >
-              Log Note
-            </Button>
-          </div>
-        }
+        actions={<ReflectionHeaderActions weekStart={weekStart} onChangeWeekStart={onChangeWeekStart} onLogFriction={onLogFriction} />}
       />
-
-      {isLoading && !reflection ? (
-        <LoadingState label="Loading weekly reflection..." variant="blue" />
-      ) : !reflection || reflection.total_notes === 0 ? (
-        <EmptyState
-          title="Quiet week logged"
-          description="No friction observations recorded for this week yet. Log a quick note whenever a cue or block transition feels sticky."
-          action={
-            <Button variant="blue" size="sm" onClick={onLogFriction} className="min-h-[44px]">
-              Log Observation
-            </Button>
-          }
-        />
-      ) : (
-        <>
-          <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="text-slate-300">
-              {reflection.total_notes} calm {reflection.total_notes === 1 ? 'observation' : 'observations'} captured for review
-            </span>
-            <span className="font-mono text-sky-300">
-              {reflection.by_cue.length} cues / {reflection.by_tag.length} patterns
-            </span>
-          </div>
-          <ReflectionSections
-            reflection={reflection}
-            onDeleteFrictionNote={onDeleteFrictionNote}
-          />
-        </>
-      )}
+      <ReflectionBody reflection={reflection} isLoading={isLoading} onLogFriction={onLogFriction} onDeleteFrictionNote={onDeleteFrictionNote} />
     </GlassCard>
   );
 };

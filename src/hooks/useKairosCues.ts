@@ -42,23 +42,18 @@ function resolveCueError(error: unknown): string {
   return error instanceof Error && error.message ? error.message : 'Unexpected cue or friction error';
 }
 
-export function useKairosCues(targetDate: string): KairosCuesActions {
+function useCueQueries(weekStart: string) {
   const [cues, setCues] = useState<HabitCue[]>([]);
   const [frictionNotes, setFrictionNotes] = useState<FrictionNote[]>([]);
   const [reflection, setReflection] = useState<WeeklyReflection | null>(null);
-  const [weekStart, setWeekStart] = useState<string>(() => getMondayOfWeek(targetDate));
   const [isLoadingCues, setIsLoadingCues] = useState<boolean>(true);
   const [isLoadingReflection, setIsLoadingReflection] = useState<boolean>(true);
   const [cuesError, setCuesError] = useState<string | null>(null);
-  const [cueMutationError, setCueMutationError] = useState<string | null>(null);
 
   const loadCuesAndNotes = useCallback(async () => {
     setIsLoadingCues(true);
     try {
-      const [cueList, noteList] = await Promise.all([
-        fetchCues(),
-        fetchFrictionNotes({ limit: 40 }),
-      ]);
+      const [cueList, noteList] = await Promise.all([fetchCues(), fetchFrictionNotes({ limit: 40 })]);
       setCues(cueList);
       setFrictionNotes(noteList);
       setCuesError(null);
@@ -82,10 +77,6 @@ export function useKairosCues(targetDate: string): KairosCuesActions {
     }
   }, []);
 
-  const refreshCues = useCallback(async () => {
-    await Promise.all([loadCuesAndNotes(), loadReflection(weekStart)]);
-  }, [loadCuesAndNotes, loadReflection, weekStart]);
-
   useEffect(() => {
     void loadCuesAndNotes();
   }, [loadCuesAndNotes]);
@@ -94,32 +85,38 @@ export function useKairosCues(targetDate: string): KairosCuesActions {
     void loadReflection(weekStart);
   }, [loadReflection, weekStart]);
 
+  const refreshCues = useCallback(async () => {
+    await Promise.all([loadCuesAndNotes(), loadReflection(weekStart)]);
+  }, [loadCuesAndNotes, loadReflection, weekStart]);
+
+  return { cues, frictionNotes, reflection, isLoadingCues, isLoadingReflection, cuesError, refreshCues };
+}
+
+export function useKairosCues(targetDate: string): KairosCuesActions {
+  const [weekStart, setWeekStart] = useState<string>(() => getMondayOfWeek(targetDate));
+  const [cueMutationError, setCueMutationError] = useState<string | null>(null);
+  const queryState = useCueQueries(weekStart);
+
   const runMutation = useCallback(
     async (op: () => Promise<unknown>) => {
       setCueMutationError(null);
       try {
         await op();
-        await refreshCues();
+        await queryState.refreshCues();
       } catch (error: unknown) {
         setCueMutationError(resolveCueError(error));
         throw error;
       }
     },
-    [refreshCues]
+    [queryState.refreshCues]
   );
 
   return {
-    cues,
-    frictionNotes,
-    reflection,
+    ...queryState,
     weekStart,
-    isLoadingCues,
-    isLoadingReflection,
-    cuesError,
     cueMutationError,
     clearCueMutationError: () => setCueMutationError(null),
     setWeekStart,
-    refreshCues,
     addCue: (payload) => runMutation(() => createCue(payload)),
     editCue: (cueId, payload) => runMutation(() => updateCue(cueId, payload)),
     removeCue: (cueId) => runMutation(() => deleteCue(cueId)),
