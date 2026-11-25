@@ -29,12 +29,22 @@ interface CommitmentFormState {
   startTime: string;
   endTime: string;
   nudgeMode: NudgeMode;
+  urgentQuietBypass: boolean;
   notes: string;
 }
 
 function buildInitialForm(defaultDate: string, editing: Commitment | null): CommitmentFormState {
   if (!editing) {
-    return { title: '', targetDate: defaultDate, allDay: false, startTime: '10:00', endTime: '11:00', nudgeMode: 'boundary', notes: '' };
+    return {
+      title: '',
+      targetDate: defaultDate,
+      allDay: false,
+      startTime: '10:00',
+      endTime: '11:00',
+      nudgeMode: 'two-stage',
+      urgentQuietBypass: false,
+      notes: '',
+    };
   }
   return {
     title: editing.title,
@@ -43,6 +53,7 @@ function buildInitialForm(defaultDate: string, editing: Commitment | null): Comm
     startTime: editing.start_minute !== null ? minuteToTimeInput(editing.start_minute) : '10:00',
     endTime: editing.end_minute !== null ? minuteToTimeInput(editing.end_minute) : '11:00',
     nudgeMode: editing.nudge_mode,
+    urgentQuietBypass: editing.urgent_quiet_bypass,
     notes: editing.notes ?? '',
   };
 }
@@ -67,9 +78,15 @@ function validateCommitmentForm(form: CommitmentFormState): { payload?: Commitme
       start_minute: startMinute,
       end_minute: endMinute,
       nudge_mode: form.nudgeMode,
+      urgent_quiet_bypass: form.allDay ? false : form.urgentQuietBypass,
       notes: form.notes.trim() || null,
     },
   };
+}
+
+function resolveToggledNudgeMode(nextAllDay: boolean, current: NudgeMode): NudgeMode {
+  if (nextAllDay) return 'none';
+  return current === 'none' ? 'two-stage' : current;
 }
 
 const CommitmentTimeFields: React.FC<{
@@ -85,7 +102,17 @@ const CommitmentTimeFields: React.FC<{
         <button
           type="button"
           data-testid="commitment-allday-toggle"
-          onClick={() => setForm((p) => ({ ...p, allDay: !p.allDay }))}
+          onClick={() =>
+            setForm((p) => {
+              const nextAllDay = !p.allDay;
+              return {
+                ...p,
+                allDay: nextAllDay,
+                nudgeMode: resolveToggledNudgeMode(nextAllDay, p.nudgeMode),
+                urgentQuietBypass: nextAllDay ? false : p.urgentQuietBypass,
+              };
+            })
+          }
           className={`min-h-[44px] w-full rounded-xl border px-3 text-base sm:text-xs font-semibold transition-colors ${
             form.allDay ? 'bg-accent/20 border-accent/50 text-accent' : 'bg-background border-border text-slate-300 hover:border-slate-600'
           }`}
@@ -119,9 +146,26 @@ const CommitmentFormBody: React.FC<{
       <TextInput id="commitment-title" data-testid="commitment-title-input" variant="brand" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Clinic Appointment" required />
     </FormField>
     <CommitmentTimeFields form={form} setForm={setForm} />
-    <FormField label="Nudge Mode" htmlFor="commitment-nudge">
-      <SelectInput id="commitment-nudge" variant="brand" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
-    </FormField>
+    <div className={`grid grid-cols-1 ${form.allDay ? '' : 'sm:grid-cols-2'} gap-3`}>
+      <FormField label="Nudge Mode" htmlFor="commitment-nudge">
+        <SelectInput id="commitment-nudge" data-testid="commitment-nudge-select" variant="brand" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
+      </FormField>
+      {!form.allDay && (
+        <FormField label="Quiet Hours">
+          <button
+            type="button"
+            data-testid="commitment-urgent-bypass-toggle"
+            aria-pressed={form.urgentQuietBypass}
+            onClick={() => setForm((p) => ({ ...p, urgentQuietBypass: !p.urgentQuietBypass }))}
+            className={`min-h-[44px] w-full rounded-xl border px-3 text-base sm:text-xs font-semibold transition-colors ${
+              form.urgentQuietBypass ? 'bg-amber-500/20 border-amber-500/50 text-amber-200' : 'bg-background border-border text-slate-300 hover:border-slate-600'
+            }`}
+          >
+            {form.urgentQuietBypass ? 'Urgent Quiet Bypass On' : 'Respect Quiet Hours'}
+          </button>
+        </FormField>
+      )}
+    </div>
     <FormField label="Notes" htmlFor="commitment-notes">
       <TextArea id="commitment-notes" variant="brand" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional context or location" />
     </FormField>

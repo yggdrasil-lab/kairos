@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Plus, Sparkles } from 'lucide-react';
+import { Bell, Clock, Plus, PlusCircle, Sparkles } from 'lucide-react';
 import { Button, GlassCard, ProgressBar, StatusBadge } from '@yggdrasil-lab/ui';
 import {
   computeSliceProgress,
@@ -9,11 +9,13 @@ import {
   resolveCategoryMeta,
   SOURCE_META,
 } from '../domain/schedule';
-import type { NowNextState, ResolvedSlice } from '../domain/types';
+import type { ExtendMinutes, NowNextState, ResolvedSlice } from '../domain/types';
 
 export interface NowNextHeroProps {
   nowNext: NowNextState;
   onAddCommitment: () => void;
+  onExtendBlock?: (gridBlockId: number, minutes: ExtendMinutes) => Promise<void> | void;
+  isExtending?: boolean;
 }
 
 const HeroBadgeRow: React.FC<{
@@ -37,33 +39,102 @@ const HeroBadgeRow: React.FC<{
   </div>
 );
 
-const ActiveSliceContent: React.FC<{ slice: ResolvedSlice; nowMinute: number }> = ({ slice, nowMinute }) => {
-  const progress = computeSliceProgress(slice.start_minute, slice.end_minute, nowMinute);
+const TransitionWrapupBanner: React.FC<{ slice: ResolvedSlice; remainingMinutes: number }> = ({
+  slice,
+  remainingMinutes,
+}) => {
+  if (slice.nudge_mode === 'none' || remainingMinutes > 10) {
+    return null;
+  }
+  const cueMessage =
+    remainingMinutes > 0
+      ? `Transition cue: ${formatDuration(remainingMinutes)} left. Start wrapping up.`
+      : 'Transition cue: Block boundary reached. Ready to switch.';
+  return (
+    <div
+      data-testid="transition-wrapup-banner"
+      className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+    >
+      <Bell className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+      <span>{cueMessage}</span>
+    </div>
+  );
+};
+
+const ExtendRecoveryControls: React.FC<{
+  slice: ResolvedSlice;
+  onExtendBlock?: (gridBlockId: number, minutes: ExtendMinutes) => Promise<void> | void;
+  isExtending: boolean;
+}> = ({ slice, onExtendBlock, isExtending }) => {
+  if (slice.kind !== 'grid_block' || !onExtendBlock) return null;
+  if (slice.extension_count >= 2) {
+    return (
+      <div className="pt-1 flex flex-wrap items-center gap-2">
+        <span data-testid="extend-cap-pill" className="inline-flex items-center rounded-full border border-border/80 bg-background/60 px-2.5 py-1 text-[11px] font-medium text-slate-400">
+          Extend cap reached (2/2)
+        </span>
+      </div>
+    );
+  }
+  const atMidnight = slice.end_minute >= 1440;
+  return (
+    <div className="pt-1 flex flex-wrap items-center gap-2">
+      <Button variant="secondary" size="xs" data-testid="extend-15m-btn" disabled={isExtending || atMidnight} loading={isExtending} icon={<PlusCircle className="w-3.5 h-3.5" />} onClick={() => void onExtendBlock(slice.source_id, 15)} className="min-h-[44px] sm:min-h-[34px]">
+        Extend +15m
+      </Button>
+      <Button variant="outline" size="xs" data-testid="extend-30m-btn" disabled={isExtending || atMidnight} icon={<PlusCircle className="w-3.5 h-3.5" />} onClick={() => void onExtendBlock(slice.source_id, 30)} className="min-h-[44px] sm:min-h-[34px]">
+        Extend +30m
+      </Button>
+    </div>
+  );
+};
+
+const ActiveSliceHeader: React.FC<{ slice: ResolvedSlice }> = ({ slice }) => {
   const categoryMeta = resolveCategoryMeta(slice.category);
   const sourceMeta = slice.source ? SOURCE_META[slice.source] : null;
-
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="space-y-1 min-w-0">
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-100 leading-tight break-words">{slice.title}</h2>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-mono">
-            <span>{formatMinuteRange(slice.start_minute, slice.end_minute)}</span>
-            <span className="text-slate-600">/</span>
-            <span>{NUDGE_LABELS[slice.nudge_mode]}</span>
-          </div>
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="space-y-1 min-w-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-100 leading-tight break-words">{slice.title}</h2>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-mono">
+          <span>{formatMinuteRange(slice.start_minute, slice.end_minute)}</span>
+          <span className="text-slate-600">/</span>
+          <span>{NUDGE_LABELS[slice.nudge_mode]}</span>
         </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {slice.extension_count > 0 && (
+          <span data-testid="active-extended-badge">
+            <StatusBadge label={`Extended x${slice.extension_count}`} variant="warning" size="xs" />
+          </span>
+        )}
         {sourceMeta ? (
           <StatusBadge label={`Carve-Out: ${sourceMeta.label}`} variant={sourceMeta.badgeVariant} size="xs" />
         ) : (
           <StatusBadge label={categoryMeta.label} variant={categoryMeta.badgeVariant} size="xs" />
         )}
       </div>
+    </div>
+  );
+};
+
+const ActiveSliceContent: React.FC<{
+  slice: ResolvedSlice;
+  nowMinute: number;
+  onExtendBlock?: (gridBlockId: number, minutes: ExtendMinutes) => Promise<void> | void;
+  isExtending: boolean;
+}> = ({ slice, nowMinute, onExtendBlock, isExtending }) => {
+  const progress = computeSliceProgress(slice.start_minute, slice.end_minute, nowMinute);
+  return (
+    <div className="space-y-3">
+      <ActiveSliceHeader slice={slice} />
       <ProgressBar value={progress.percent} tone={slice.has_conflict ? 'rose' : 'brand'} size="md" label="Active slice progress" />
       <div className="flex items-center justify-between text-xs text-slate-300 font-mono">
         <span>{formatDuration(progress.elapsedMinutes)} elapsed</span>
         <span className="text-accent font-semibold">{formatDuration(progress.remainingMinutes)} remaining</span>
       </div>
+      <TransitionWrapupBanner slice={slice} remainingMinutes={progress.remainingMinutes} />
+      <ExtendRecoveryControls slice={slice} onExtendBlock={onExtendBlock} isExtending={isExtending} />
     </div>
   );
 };
@@ -141,7 +212,12 @@ const UpcomingPreview: React.FC<{ nextSlice: ResolvedSlice | undefined; nowMinut
   );
 };
 
-export const NowNextHero: React.FC<NowNextHeroProps> = ({ nowNext, onAddCommitment }) => {
+export const NowNextHero: React.FC<NowNextHeroProps> = ({
+  nowNext,
+  onAddCommitment,
+  onExtendBlock,
+  isExtending = false,
+}) => {
   const active = nowNext.active_slice;
   const hasConflict = Boolean(active?.has_conflict) || nowNext.active_items.length > 1;
   const suppressedTail = Boolean(active?.suppressed_tail);
@@ -156,7 +232,12 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({ nowNext, onAddCommitme
         targetDate={nowNext.target_date}
       />
       {active ? (
-        <ActiveSliceContent slice={active} nowMinute={nowNext.now_minute} />
+        <ActiveSliceContent
+          slice={active}
+          nowMinute={nowNext.now_minute}
+          onExtendBlock={onExtendBlock}
+          isExtending={isExtending}
+        />
       ) : (
         <OpenTimeContent openMinutes={nowNext.open_time_minutes} onAddCommitment={onAddCommitment} />
       )}

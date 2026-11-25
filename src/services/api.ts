@@ -15,6 +15,12 @@ import type {
   HabitCueCreate,
   HabitCueUpdate,
   NowNextState,
+  PushSubscriptionPayload,
+  PushSubscriptionResponse,
+  PushUnsubscribeResponse,
+  ScheduleExtendRequest,
+  ScheduleExtendResponse,
+  VapidPublicKeyResponse,
   WeeklyReflection,
 } from '../domain/types';
 
@@ -243,4 +249,32 @@ export function fetchWeeklyReflection(weekStart?: string): Promise<WeeklyReflect
   if (weekStart) params.set('week_start', weekStart);
   const qs = params.toString();
   return requestJson<WeeklyReflection>(qs ? `/friction-notes/reflection?${qs}` : '/friction-notes/reflection');
+}
+
+export function extendActiveBlock(payload: ScheduleExtendRequest): Promise<ScheduleExtendResponse> {
+  return requestJson<ScheduleExtendResponse>('/schedule/extend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getVapidPublicKey(): Promise<VapidPublicKeyResponse> {
+  return requestJson<VapidPublicKeyResponse>('/push/vapid-public-key');
+}
+
+export function subscribePush(payload: PushSubscriptionPayload): Promise<PushSubscriptionResponse> {
+  return requestJson<PushSubscriptionResponse>('/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function unsubscribePush(endpoint: string): Promise<PushUnsubscribeResponse> {
+  return requestJson<PushUnsubscribeResponse>('/push/unsubscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint }),
+  });
 }

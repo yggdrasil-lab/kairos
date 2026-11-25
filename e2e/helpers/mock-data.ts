@@ -16,25 +16,25 @@ const TARGET_DATE = '2026-11-25';
 const NOW_MINUTE = 570; // 09:30
 
 const INITIAL_WEEKLY_GRID: GridBlock[] = [
-  { id: 1, title: 'Monday Deep Work', day_of_week: 0, start_minute: 540, end_minute: 720, category: 'deep_work', nudge_mode: 'two-stage', active: true, notes: 'Architecture sprint' },
-  { id: 2, title: 'Tuesday Admin & Inbox', day_of_week: 1, start_minute: 540, end_minute: 630, category: 'admin', nudge_mode: 'boundary', active: true, notes: null },
-  { id: 3, title: 'Wednesday Deep Work', day_of_week: 2, start_minute: 540, end_minute: 720, category: 'deep_work', nudge_mode: 'two-stage', active: true, notes: 'Core focus block' },
-  { id: 4, title: 'Evening Mobility', day_of_week: 2, start_minute: 1050, end_minute: 1110, category: 'health', nudge_mode: 'boundary', active: true, notes: 'Stretch and zone 2 walk' },
-  { id: 5, title: 'Thursday Systems Review', day_of_week: 3, start_minute: 600, end_minute: 720, category: 'deep_work', nudge_mode: 'two-stage', active: true, notes: null },
-  { id: 6, title: 'Friday Weekly Retro', day_of_week: 4, start_minute: 900, end_minute: 960, category: 'admin', nudge_mode: 'boundary', active: true, notes: null },
-  { id: 7, title: 'Saturday Trail Run', day_of_week: 5, start_minute: 480, end_minute: 570, category: 'health', nudge_mode: 'none', active: true, notes: null },
-  { id: 8, title: 'Sunday Weekly Reset', day_of_week: 6, start_minute: 960, end_minute: 1050, category: 'personal', nudge_mode: 'boundary', active: true, notes: null },
+  { id: 1, title: 'Monday Deep Work', day_of_week: 0, start_minute: 540, end_minute: 720, category: 'deep_work', nudge_mode: 'two-stage', flexible: false, active: true, notes: 'Architecture sprint' },
+  { id: 2, title: 'Tuesday Admin & Inbox', day_of_week: 1, start_minute: 540, end_minute: 630, category: 'admin', nudge_mode: 'boundary', flexible: true, active: true, notes: null },
+  { id: 3, title: 'Wednesday Deep Work', day_of_week: 2, start_minute: 540, end_minute: 720, category: 'deep_work', nudge_mode: 'two-stage', flexible: false, active: true, notes: 'Core focus block' },
+  { id: 4, title: 'Evening Mobility', day_of_week: 2, start_minute: 1050, end_minute: 1110, category: 'health', nudge_mode: 'boundary', flexible: true, active: true, notes: 'Stretch and zone 2 walk' },
+  { id: 5, title: 'Thursday Systems Review', day_of_week: 3, start_minute: 600, end_minute: 720, category: 'deep_work', nudge_mode: 'two-stage', flexible: false, active: true, notes: null },
+  { id: 6, title: 'Friday Weekly Retro', day_of_week: 4, start_minute: 900, end_minute: 960, category: 'admin', nudge_mode: 'boundary', flexible: true, active: true, notes: null },
+  { id: 7, title: 'Saturday Trail Run', day_of_week: 5, start_minute: 480, end_minute: 570, category: 'health', nudge_mode: 'none', flexible: false, active: true, notes: null },
+  { id: 8, title: 'Sunday Weekly Reset', day_of_week: 6, start_minute: 960, end_minute: 1050, category: 'personal', nudge_mode: 'boundary', flexible: true, active: true, notes: null },
 ];
 
 const INITIAL_COMMITMENTS: Commitment[] = [
-  { id: 101, title: 'Release Freeze Window', target_date: TARGET_DATE, start_minute: null, end_minute: null, all_day: true, source: 'iris', external_ref: 'cal-all-day-101', nudge_mode: 'none', notes: 'Production change window', has_conflict: false },
-  { id: 102, title: 'Design Review Sync', target_date: TARGET_DATE, start_minute: 600, end_minute: 708, all_day: false, source: 'iris', external_ref: 'cal-102', nudge_mode: 'boundary', notes: 'Carves Wednesday Deep Work leaving <15m tail suppressed', has_conflict: true },
-  { id: 103, title: 'Physio Check-In', target_date: TARGET_DATE, start_minute: 660, end_minute: 720, all_day: false, source: 'kratos', external_ref: 'kratos-103', nudge_mode: 'two-stage', notes: 'Overlaps Design Review Sync', has_conflict: true },
+  { id: 101, title: 'Release Freeze Window', target_date: TARGET_DATE, start_minute: null, end_minute: null, all_day: true, source: 'iris', external_ref: 'cal-all-day-101', nudge_mode: 'none', urgent_quiet_bypass: false, notes: 'Production change window', has_conflict: false },
+  { id: 102, title: 'Design Review Sync', target_date: TARGET_DATE, start_minute: 600, end_minute: 708, all_day: false, source: 'iris', external_ref: 'cal-102', nudge_mode: 'boundary', urgent_quiet_bypass: false, notes: 'Carves Wednesday Deep Work leaving <15m tail suppressed', has_conflict: true },
+  { id: 103, title: 'Physio Check-In', target_date: TARGET_DATE, start_minute: 660, end_minute: 720, all_day: false, source: 'kratos', external_ref: 'kratos-103', nudge_mode: 'two-stage', urgent_quiet_bypass: false, notes: 'Overlaps Design Review Sync', has_conflict: true },
 ];
 
-const STATIC_GRID_SLICES: ResolvedSlice[] = [
-  { slice_id: 'grid-3-0', kind: 'grid_block', source_id: 3, title: 'Wednesday Deep Work', start_minute: 540, end_minute: 600, category: 'deep_work', source: null, nudge_mode: 'two-stage', has_conflict: false, suppressed_tail: true, extension_count: 0, notes: 'Carved before 10:00 sync (<15m tail after 11:48 suppressed)' },
-  { slice_id: 'grid-4-0', kind: 'grid_block', source_id: 4, title: 'Evening Mobility', start_minute: 1050, end_minute: 1110, category: 'health', source: null, nudge_mode: 'boundary', has_conflict: false, suppressed_tail: false, extension_count: 0, notes: 'Stretch and zone 2 walk' },
+const INITIAL_GRID_SLICES: ResolvedSlice[] = [
+  { slice_id: 'grid-3-0', kind: 'grid_block', source_id: 3, title: 'Wednesday Deep Work', start_minute: 540, end_minute: 600, category: 'deep_work', source: null, nudge_mode: 'two-stage', flexible: false, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: true, extension_count: 0, notes: 'Carved before 10:00 sync (<15m tail after 11:48 suppressed)' },
+  { slice_id: 'grid-4-0', kind: 'grid_block', source_id: 4, title: 'Evening Mobility', start_minute: 1050, end_minute: 1110, category: 'health', source: null, nudge_mode: 'boundary', flexible: true, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: false, extension_count: 0, notes: 'Stretch and zone 2 walk' },
 ];
 
 const INITIAL_CUES: Omit<HabitCue, 'recent_friction'>[] = [
@@ -50,10 +50,12 @@ const INITIAL_FRICTION_NOTES: FrictionNote[] = [
 
 interface MockStore {
   weeklyGrid: GridBlock[];
+  gridSlices: ResolvedSlice[];
   commitments: Commitment[];
   exceptions: GridException[];
   cues: Omit<HabitCue, 'recent_friction'>[];
   frictionNotes: FrictionNote[];
+  pushSubscriptions: string[];
   nextId: number;
 }
 
@@ -119,6 +121,8 @@ function toCommitmentSlice(item: Commitment): ResolvedSlice {
     category: null,
     source: item.source,
     nudge_mode: item.nudge_mode,
+    flexible: false,
+    urgent_quiet_bypass: item.urgent_quiet_bypass,
     has_conflict: item.has_conflict,
     suppressed_tail: false,
     extension_count: 0,
@@ -126,24 +130,24 @@ function toCommitmentSlice(item: Commitment): ResolvedSlice {
   };
 }
 
-function buildSlices(commitments: Commitment[]): ResolvedSlice[] {
-  const timed = commitments
+function buildSlices(store: MockStore): ResolvedSlice[] {
+  const timed = store.commitments
     .filter((c) => !c.all_day && c.start_minute !== null && c.end_minute !== null)
     .map(toCommitmentSlice);
-  return [...STATIC_GRID_SLICES, ...timed].sort((a, b) => a.start_minute - b.start_minute);
+  return [...store.gridSlices, ...timed].sort((a, b) => a.start_minute - b.start_minute);
 }
 
-function buildNowNextPayload(commitments: Commitment[]): NowNextState {
-  const slices = buildSlices(commitments);
+function buildNowNextPayload(store: MockStore): NowNextState {
+  const slices = buildSlices(store);
   const activeItems = slices.filter((s) => s.start_minute <= NOW_MINUTE && NOW_MINUTE < s.end_minute);
   const upcoming = slices.filter((s) => s.start_minute > NOW_MINUTE);
   const openTime = activeItems.length === 0 && upcoming[0] ? upcoming[0].start_minute - NOW_MINUTE : null;
   return { target_date: TARGET_DATE, now_minute: NOW_MINUTE, active_slice: activeItems[0] ?? null, active_items: activeItems, upcoming, open_time_minutes: openTime, is_quiet_hours: false };
 }
 
-function buildDayPayload(commitments: Commitment[]): DaySchedule {
-  const slices = buildSlices(commitments);
-  return { target_date: TARGET_DATE, slices, all_day_commitments: commitments.filter((c) => c.all_day), timed_commitments: commitments.filter((c) => !c.all_day), has_conflicts: slices.some((s) => s.has_conflict) };
+function buildDayPayload(store: MockStore): DaySchedule {
+  const slices = buildSlices(store);
+  return { target_date: TARGET_DATE, slices, all_day_commitments: store.commitments.filter((c) => c.all_day), timed_commitments: store.commitments.filter((c) => !c.all_day), has_conflicts: slices.some((s) => s.has_conflict) };
 }
 
 async function handleCueRoutes(route: Route, store: MockStore, path: string, method: string, url: URL): Promise<boolean> {
@@ -245,6 +249,68 @@ async function handleFrictionRoutes(route: Route, store: MockStore, path: string
   return false;
 }
 
+async function handlePushRoutes(route: Route, store: MockStore, path: string, method: string): Promise<boolean> {
+  if (path === '/push/vapid-public-key' && method === 'GET') {
+    await route.fulfill({ json: { public_key: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8', enabled: true } });
+    return true;
+  }
+  if (path === '/push/subscribe' && method === 'POST') {
+    const body = route.request().postDataJSON() as { endpoint: string };
+    if (!store.pushSubscriptions.includes(body.endpoint)) store.pushSubscriptions.push(body.endpoint);
+    await route.fulfill({ json: { id: 1, endpoint: body.endpoint, active: true } });
+    return true;
+  }
+  if (path === '/push/unsubscribe' && method === 'POST') {
+    const body = route.request().postDataJSON() as { endpoint: string };
+    const idx = store.pushSubscriptions.indexOf(body.endpoint);
+    if (idx >= 0) store.pushSubscriptions.splice(idx, 1);
+    await route.fulfill({ json: { endpoint: body.endpoint, removed: idx >= 0 } });
+    return true;
+  }
+  return false;
+}
+
+function trimFlexibleFollowers(store: MockStore, slice: ResolvedSlice, nextEnd: number, targetDate: string): GridException[] {
+  const trimmedExceptions: GridException[] = [];
+  for (const candidate of store.gridSlices) {
+    if (candidate.source_id !== slice.source_id && candidate.flexible && candidate.start_minute >= slice.start_minute && candidate.start_minute < nextEnd) {
+      candidate.start_minute = nextEnd;
+      const trimmed: GridException = { id: store.nextId++, grid_block_id: candidate.source_id, target_date: targetDate, skipped: false, start_minute: nextEnd, end_minute: candidate.end_minute, extension_count: 0, notes: 'Trimmed by extend' };
+      store.exceptions.push(trimmed);
+      trimmedExceptions.push(trimmed);
+    }
+  }
+  return trimmedExceptions;
+}
+
+async function handleExtendRoute(route: Route, store: MockStore, path: string, method: string): Promise<boolean> {
+  if (path !== '/schedule/extend' || method !== 'POST') return false;
+  const body = route.request().postDataJSON() as { target_date: string; grid_block_id: number; minutes: number };
+  const slice = store.gridSlices.find((s) => s.source_id === body.grid_block_id);
+  if (!slice) {
+    await route.fulfill({ status: 404, json: { detail: 'Grid block not found' } });
+    return true;
+  }
+  let exc = store.exceptions.find((e) => e.grid_block_id === body.grid_block_id && e.target_date === body.target_date);
+  if ((exc && (exc.skipped || exc.extension_count >= 2)) || slice.end_minute >= 1440) {
+    await route.fulfill({ status: 409, json: { detail: 'Cannot extend block further' } });
+    return true;
+  }
+  const nextEnd = Math.min(1440, slice.end_minute + body.minutes);
+  slice.end_minute = nextEnd;
+  slice.extension_count += 1;
+  if (!exc) {
+    exc = { id: store.nextId++, grid_block_id: body.grid_block_id, target_date: body.target_date, skipped: false, start_minute: slice.start_minute, end_minute: nextEnd, extension_count: slice.extension_count, notes: 'Extended' };
+    store.exceptions.push(exc);
+  } else {
+    exc.end_minute = nextEnd;
+    exc.extension_count = slice.extension_count;
+  }
+  const trimmedExceptions = trimFlexibleFollowers(store, slice, nextEnd, body.target_date);
+  await route.fulfill({ json: { extended_exception: exc, trimmed_exceptions: trimmedExceptions } });
+  return true;
+}
+
 async function handleApiRoute(route: Route, store: MockStore): Promise<void> {
   const request = route.request();
   const url = new URL(request.url());
@@ -252,11 +318,11 @@ async function handleApiRoute(route: Route, store: MockStore): Promise<void> {
   const method = request.method();
 
   if (path === '/schedule/now-next' && method === 'GET') {
-    await route.fulfill({ json: buildNowNextPayload(store.commitments) });
+    await route.fulfill({ json: buildNowNextPayload(store) });
     return;
   }
   if (path === '/schedule/day' && method === 'GET') {
-    await route.fulfill({ json: buildDayPayload(store.commitments) });
+    await route.fulfill({ json: buildDayPayload(store) });
     return;
   }
   if (path === '/weekly-grid' && method === 'GET') {
@@ -269,11 +335,13 @@ async function handleApiRoute(route: Route, store: MockStore): Promise<void> {
   }
   if (path === '/weekly-grid/blocks' && method === 'POST') {
     const body = request.postDataJSON() as Omit<GridBlock, 'id'>;
-    const created: GridBlock = { id: store.nextId++, ...body, active: body.active ?? true };
+    const created: GridBlock = { id: store.nextId++, ...body, flexible: Boolean(body.flexible), active: body.active ?? true };
     store.weeklyGrid.push(created);
     await route.fulfill({ status: 201, json: created });
     return;
   }
+  if (await handlePushRoutes(route, store, path, method)) return;
+  if (await handleExtendRoute(route, store, path, method)) return;
   if (await handleCueRoutes(route, store, path, method, url)) return;
   if (await handleFrictionRoutes(route, store, path, method, url)) return;
   await handleCommitmentMutation(route, store, path, method);
@@ -291,7 +359,8 @@ async function handleCommitmentMutation(route: Route, store: MockStore, path: st
       all_day: Boolean(body.all_day),
       source: body.source ?? 'manual',
       external_ref: null,
-      nudge_mode: body.nudge_mode ?? 'boundary',
+      nudge_mode: body.nudge_mode ?? 'two-stage',
+      urgent_quiet_bypass: Boolean(body.urgent_quiet_bypass),
       notes: body.notes ?? null,
       has_conflict: false,
     };
@@ -312,10 +381,12 @@ async function handleCommitmentMutation(route: Route, store: MockStore, path: st
 export async function setupKairosMockApi(page: Page): Promise<void> {
   const store: MockStore = {
     weeklyGrid: INITIAL_WEEKLY_GRID.map((b) => ({ ...b })),
+    gridSlices: INITIAL_GRID_SLICES.map((s) => ({ ...s })),
     commitments: INITIAL_COMMITMENTS.map((c) => ({ ...c })),
     exceptions: [],
     cues: INITIAL_CUES.map((c) => ({ ...c, grid_block_ids: [...c.grid_block_ids] })),
     frictionNotes: INITIAL_FRICTION_NOTES.map((n) => ({ ...n })),
+    pushSubscriptions: [],
     nextId: 600,
   };
   await page.route('**/api/**', (route) => handleApiRoute(route, store));
