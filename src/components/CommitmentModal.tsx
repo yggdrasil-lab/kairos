@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CalendarPlus } from 'lucide-react';
+import { CalendarPlus, Trash2 } from 'lucide-react';
 import {
   AlertBanner,
   Button,
@@ -19,6 +19,7 @@ export interface CommitmentModalProps {
   error: string | null;
   onClose: () => void;
   onSave: (payload: CommitmentCreate, editingId: number | null) => Promise<void>;
+  onDelete?: (commitmentId: number) => Promise<void>;
 }
 
 interface CommitmentFormState {
@@ -110,11 +111,8 @@ const CommitmentFormBody: React.FC<{
   form: CommitmentFormState;
   setForm: React.Dispatch<React.SetStateAction<CommitmentFormState>>;
   error: string | null;
-  isEditing: boolean;
-  submitting: boolean;
-  onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
-}> = ({ form, setForm, error, isEditing, submitting, onClose, onSubmit }) => (
+}> = ({ form, setForm, error, onSubmit }) => (
   <form id="commitment-form" onSubmit={onSubmit} className="space-y-4">
     {Boolean(error) && <AlertBanner variant="error">{error}</AlertBanner>}
     <FormField label="Title" htmlFor="commitment-title" required>
@@ -127,13 +125,33 @@ const CommitmentFormBody: React.FC<{
     <FormField label="Notes" htmlFor="commitment-notes">
       <TextArea id="commitment-notes" variant="blue" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional context or location" />
     </FormField>
-    <div className="flex items-center justify-end gap-2 pt-2">
-      <Button variant="secondary" size="sm" onClick={onClose} className="min-h-[44px] sm:min-h-[36px]">Cancel</Button>
-      <Button type="submit" variant="blue" size="sm" loading={submitting} data-testid="commitment-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
+  </form>
+);
+
+const CommitmentFooter: React.FC<{
+  isEditing: boolean;
+  submitting: boolean;
+  canDelete: boolean;
+  onDelete: () => void;
+  onClose: () => void;
+}> = ({ isEditing, submitting, canDelete, onDelete, onClose }) => (
+  <div className="flex items-center justify-between gap-2 w-full">
+    <div>
+      {isEditing && canDelete && (
+        <Button type="button" variant="danger" size="sm" disabled={submitting} data-testid="commitment-delete-btn" icon={<Trash2 className="w-4 h-4" />} onClick={onDelete} className="min-h-[44px] sm:min-h-[36px]">
+          Delete
+        </Button>
+      )}
+    </div>
+    <div className="flex items-center gap-2">
+      <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={onClose} className="min-h-[44px] sm:min-h-[36px]">
+        Cancel
+      </Button>
+      <Button type="submit" form="commitment-form" variant="blue" size="sm" loading={submitting} data-testid="commitment-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
         {isEditing ? 'Save Changes' : 'Create Commitment'}
       </Button>
     </div>
-  </form>
+  </div>
 );
 
 export const CommitmentModal: React.FC<CommitmentModalProps> = ({
@@ -143,6 +161,7 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
   error,
   onClose,
   onSave,
+  onDelete,
 }) => {
   const [form, setForm] = useState<CommitmentFormState>(() => buildInitialForm(defaultDate, editing));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -173,9 +192,37 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!editing || !onDelete) return;
+    setSubmitting(true);
+    try {
+      await onDelete(editing.id);
+      onClose();
+    } catch {
+      /* Handled via mutationError state in useKairosSchedule */
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editing ? 'Edit Commitment' : 'Add Commitment'} subtitle="Dated commitments automatically carve recurring weekly blocks." headerIcon={<CalendarPlus className="w-5 h-5 text-sky-400" />}>
-      <CommitmentFormBody form={form} setForm={setForm} error={validationError || error} isEditing={Boolean(editing)} submitting={submitting} onClose={onClose} onSubmit={handleSubmit} />
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? 'Edit Commitment' : 'Add Commitment'}
+      subtitle="Dated commitments automatically carve recurring weekly blocks."
+      headerIcon={<CalendarPlus className="w-5 h-5 text-sky-400" />}
+      footer={
+        <CommitmentFooter
+          isEditing={Boolean(editing)}
+          submitting={submitting}
+          canDelete={Boolean(onDelete)}
+          onDelete={() => void handleDelete()}
+          onClose={onClose}
+        />
+      }
+    >
+      <CommitmentFormBody form={form} setForm={setForm} error={validationError || error} onSubmit={handleSubmit} />
     </Modal>
   );
 };
