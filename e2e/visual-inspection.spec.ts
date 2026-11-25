@@ -39,15 +39,26 @@ for (const { name: platform, options } of PLATFORMS) {
     test.beforeEach(async ({ page }) => {
       await page.clock.setFixedTime(new Date('2026-11-25T09:30:00+13:00'));
       await setupKairosMockApi(page);
-      await page.goto('/');
+      await page.goto('/?tab=now');
     });
 
     test(`captures Focus Cockpit, Today, Week, Cues & Reflection, and pinned modals on ${platform}`, async ({ page }) => {
       test.setTimeout(60000);
 
+      const swResponse = await page.request.get('/sw.js');
+      expect(swResponse.status()).toBe(200);
+      const swBody = await swResponse.text();
+      expect(swBody).toContain('showNotification');
+      expect(swBody).toContain('notificationclick');
+      expect(swBody).toContain('open-now');
+      expect(swBody).toContain('/?tab=now');
+      expect(swBody).not.toContain("addEventListener('fetch'");
+
       await expect.poll(async () => {
         return await page.getByTestId('now-next-hero').isVisible();
       }).toBe(true);
+
+      await expect(page.getByTestId('header-push-btn')).toBeVisible();
 
       const themeTokens = await page.evaluate(() => {
         const root = document.documentElement;
@@ -74,6 +85,14 @@ for (const { name: platform, options } of PLATFORMS) {
         fullPage: platform === 'desktop',
         animations: 'disabled',
       });
+
+      await page.getByTestId('extend-15m-btn').click();
+      await expect(page.getByTestId('now-next-hero')).toContainText('Extended x1');
+      await expect(page.getByTestId('now-next-hero')).toContainText('09:00 - 10:15');
+      await page.getByTestId('extend-15m-btn').click();
+      await expect(page.getByTestId('now-next-hero')).toContainText('Extended x2');
+      await expect(page.getByTestId('extend-cap-pill')).toContainText('Extend cap reached (2/2)');
+      await expect(page.getByTestId('extend-15m-btn')).toBeHidden();
 
       await page.getByTestId('cue-log-friction-1').click();
       await expect(page.getByRole('heading', { name: 'Log Friction Observation' })).toBeVisible();
@@ -131,6 +150,13 @@ for (const { name: platform, options } of PLATFORMS) {
         animations: 'disabled',
       });
 
+      await page.getByTestId('add-grid-block-btn').click();
+      await expect(page.getByTestId('grid-block-flexible-toggle')).toBeVisible();
+      await page.getByTestId('grid-block-flexible-toggle').click();
+      await expect(page.getByTestId('grid-block-flexible-toggle')).toContainText('Flexible (Trim on Extend)');
+      await page.getByRole('button', { name: 'Cancel' }).click();
+      await expect(page.getByTestId('grid-block-flexible-toggle')).toBeHidden();
+
       if (platform === 'desktop') {
         await page.getByTestId('desktop-tab-cues').click();
       } else {
@@ -157,6 +183,12 @@ for (const { name: platform, options } of PLATFORMS) {
 
       await page.getByTestId('header-add-btn').click();
       await expect(page.getByRole('heading', { name: 'Add Commitment' })).toBeVisible();
+      await expect(page.getByTestId('commitment-nudge-select')).toHaveValue('two-stage');
+      await expect(page.getByTestId('commitment-urgent-bypass-toggle')).toBeVisible();
+      await page.getByTestId('commitment-allday-toggle').click();
+      await expect(page.getByTestId('commitment-urgent-bypass-toggle')).toBeHidden();
+      await page.getByTestId('commitment-allday-toggle').click();
+      await expect(page.getByTestId('commitment-urgent-bypass-toggle')).toBeVisible();
       await page.getByTestId('commitment-title-input').fill('Afternoon Sync');
       await page.getByTestId('commitment-start-input').fill('13:00');
       await page.getByTestId('commitment-end-input').fill('13:45');

@@ -4,6 +4,7 @@ import { getAucklandClockSnapshot } from '../domain/schedule';
 import type {
   CommitmentCreate,
   CommitmentUpdate,
+  ExtendMinutes,
   GridBlockCreate,
   GridBlockUpdate,
   KairosCockpitData,
@@ -15,6 +16,7 @@ import {
   deleteCommitment,
   deleteException,
   deleteGridBlock,
+  extendActiveBlock as postExtendActiveBlock,
   fetchDaySchedule,
   fetchExceptions,
   fetchNowNext,
@@ -30,6 +32,7 @@ export interface KairosScheduleActions {
   targetDate: string;
   nowMinute: number;
   isRefreshing: boolean;
+  isExtending: boolean;
   mutationError: string | null;
   clearMutationError: () => void;
   setTargetDate: (nextDate: string) => void;
@@ -42,6 +45,7 @@ export interface KairosScheduleActions {
   removeGridBlock: (id: number) => Promise<void>;
   skipGridBlockForDate: (gridBlockId: number) => Promise<void>;
   restoreException: (exceptionId: number) => Promise<void>;
+  extendActiveBlock: (gridBlockId: number, minutes: ExtendMinutes) => Promise<void>;
 }
 
 function resolveErrorMessage(error: unknown): string {
@@ -78,13 +82,10 @@ function useScheduleTimers(
   });
 }
 
-export function useKairosSchedule(): KairosScheduleActions {
-  const initialClock = useRef(getAucklandClockSnapshot());
-  const [targetDate, setTargetDate] = useState<string>(initialClock.current.isoDate);
-  const [nowMinute, setNowMinute] = useState<number>(initialClock.current.minuteOfDay);
+function useScheduleSnapshot(targetDate: string) {
+  const [nowMinute, setNowMinute] = useState<number>(() => getAucklandClockSnapshot().minuteOfDay);
   const [state, setState] = useState<LoadState<KairosCockpitData>>({ status: 'loading' });
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const loadData = useCallback(async (dateStr: string, showSpinner: boolean) => {
     const snap = getAucklandClockSnapshot();
@@ -94,38 +95,45 @@ export function useKairosSchedule(): KairosScheduleActions {
       const data = await fetchCockpitSnapshot(dateStr, snap.minuteOfDay);
       setState({ status: 'ready', data });
     } catch (error: unknown) {
-      setState({
-        status: 'error',
-        message: resolveErrorMessage(error),
-        isSessionExpired: isSessionExpiredError(error),
-      });
+      setState({ status: 'error', message: resolveErrorMessage(error), isSessionExpired: isSessionExpiredError(error) });
     } finally {
       setIsRefreshing(false);
     }
   }, []);
 
   useScheduleTimers(targetDate, loadData);
+  return { state, nowMinute, isRefreshing, loadData };
+}
 
-  const runMutation = useCallback(
-    async (op: () => Promise<unknown>) => {
-      setMutationError(null);
-      try {
-        await op();
-        await loadData(targetDate, false);
-      } catch (error: unknown) {
-        setMutationError(resolveErrorMessage(error));
-        throw error;
-      }
-    },
-    [targetDate, loadData]
-  );
+export function useKairosSchedule(): KairosScheduleActions {
+  const initialClock = useRef(getAucklandClockSnapshot());
+  const [targetDate, setTargetDate] = useState<string>(initialClock.current.isoDate);
+  const { state, nowMinute, isRefreshing, loadData } = useScheduleSnapshot(targetDate);
+  const [isExtending, setIsExtending] = useState<boolean>(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const runMutation = useCallback(async (op: () => Promise<unknown>) => {
+    setMutationError(null);
+    try {
+      await op();
+      await loadData(targetDate, false);
+    } catch (error: unknown) {
+      setMutationError(resolveErrorMessage(error));
+      throw error;
+    }
+  }, [targetDate, loadData]);
+
+  const extendActiveBlock = useCallback(async (gridBlockId: number, minutes: ExtendMinutes) => {
+    setIsExtending(true);
+    try {
+      await runMutation(() => postExtendActiveBlock({ target_date: targetDate, grid_block_id: gridBlockId, minutes }));
+    } finally {
+      setIsExtending(false);
+    }
+  }, [targetDate, runMutation]);
 
   return {
-    state,
-    targetDate,
-    nowMinute,
-    isRefreshing,
-    mutationError,
+    state, targetDate, nowMinute, isRefreshing, isExtending, mutationError,
     clearMutationError: () => setMutationError(null),
     setTargetDate,
     refresh: () => loadData(targetDate, true),
@@ -135,8 +143,8 @@ export function useKairosSchedule(): KairosScheduleActions {
     addGridBlock: (payload) => runMutation(() => createGridBlock(payload)),
     editGridBlock: (id, payload) => runMutation(() => updateGridBlock(id, payload)),
     removeGridBlock: (id) => runMutation(() => deleteGridBlock(id)),
-    skipGridBlockForDate: (gridBlockId) =>
-      runMutation(() => upsertException({ grid_block_id: gridBlockId, target_date: targetDate, skipped: true })),
+    skipGridBlockForDate: (gridBlockId) => runMutation(() => upsertException({ grid_block_id: gridBlockId, target_date: targetDate, skipped: true })),
     restoreException: (exceptionId) => runMutation(() => deleteException(exceptionId)),
+    extendActiveBlock,
   };
 }

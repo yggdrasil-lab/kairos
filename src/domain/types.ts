@@ -24,6 +24,7 @@ export interface GridBlock {
   end_minute: number;
   category: string;
   nudge_mode: NudgeMode;
+  flexible: boolean;
   active: boolean;
   notes: string | null;
 }
@@ -35,6 +36,7 @@ export interface GridBlockCreate {
   end_minute: number;
   category: string;
   nudge_mode: NudgeMode;
+  flexible?: boolean;
   active?: boolean;
   notes?: string | null;
 }
@@ -46,6 +48,7 @@ export interface GridBlockUpdate {
   end_minute?: number;
   category?: string;
   nudge_mode?: NudgeMode;
+  flexible?: boolean;
   active?: boolean;
   notes?: string | null;
 }
@@ -81,6 +84,7 @@ export interface Commitment {
   source: CommitmentSource;
   external_ref: string | null;
   nudge_mode: NudgeMode;
+  urgent_quiet_bypass: boolean;
   notes: string | null;
   has_conflict: boolean;
 }
@@ -94,6 +98,7 @@ export interface CommitmentCreate {
   source?: CommitmentSource;
   external_ref?: string | null;
   nudge_mode: NudgeMode;
+  urgent_quiet_bypass?: boolean;
   notes?: string | null;
 }
 
@@ -104,6 +109,7 @@ export interface CommitmentUpdate {
   end_minute?: number | null;
   all_day?: boolean;
   nudge_mode?: NudgeMode;
+  urgent_quiet_bypass?: boolean;
   notes?: string | null;
 }
 
@@ -117,6 +123,8 @@ export interface ResolvedSlice {
   category: string | null;
   source: CommitmentSource | null;
   nudge_mode: NudgeMode;
+  flexible: boolean;
+  urgent_quiet_bypass: boolean;
   has_conflict: boolean;
   suppressed_tail: boolean;
   extension_count: number;
@@ -219,3 +227,47 @@ export type LoadState<T> =
   | { status: 'loading' }
   | { status: 'error'; message: string; isSessionExpired: boolean }
   | { status: 'ready'; data: T };
+
+export type PushSourceKind = 'grid_block' | 'commitment' | 'quiet_hours';
+
+export type PushStage = 'pre_end_10m' | 'boundary' | 'screens_off';
+
+export interface VapidPublicKeyResponse {
+  public_key: string;
+  enabled: boolean;
+}
+
+export interface PushSubscriptionKeys {
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushSubscriptionPayload {
+  endpoint: string;
+  keys: PushSubscriptionKeys;
+  user_agent?: string | null;
+}
+
+export interface PushSubscriptionResponse {
+  id: number | string;
+  endpoint: string;
+  active: boolean;
+}
+
+export interface PushUnsubscribeResponse {
+  endpoint: string;
+  removed: boolean;
+}
+
+export type ExtendMinutes = 15 | 30;
+
+export interface ScheduleExtendRequest {
+  target_date: string;
+  grid_block_id: number;
+  minutes: ExtendMinutes;
+}
+
+export interface ScheduleExtendResponse {
+  extended_exception: GridException;
+  trimmed_exceptions: GridException[];
+}

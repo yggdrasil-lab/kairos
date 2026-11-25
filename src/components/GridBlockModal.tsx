@@ -39,12 +39,22 @@ interface GridBlockFormState {
   endTime: string;
   category: string;
   nudgeMode: NudgeMode;
+  flexible: boolean;
   notes: string;
 }
 
 function buildInitialForm(defaultDayOfWeek: number, editing: GridBlock | null): GridBlockFormState {
   if (!editing) {
-    return { title: '', dayOfWeek: defaultDayOfWeek, startTime: '09:00', endTime: '11:00', category: 'deep_work', nudgeMode: 'two-stage', notes: '' };
+    return {
+      title: '',
+      dayOfWeek: defaultDayOfWeek,
+      startTime: '09:00',
+      endTime: '11:00',
+      category: 'deep_work',
+      nudgeMode: 'two-stage',
+      flexible: false,
+      notes: '',
+    };
   }
   return {
     title: editing.title,
@@ -53,6 +63,7 @@ function buildInitialForm(defaultDayOfWeek: number, editing: GridBlock | null): 
     endTime: minuteToTimeInput(editing.end_minute),
     category: editing.category,
     nudgeMode: editing.nudge_mode,
+    flexible: editing.flexible,
     notes: editing.notes ?? '',
   };
 }
@@ -76,6 +87,7 @@ function validateGridBlockForm(
       end_minute: endMinute,
       category: form.category,
       nudge_mode: form.nudgeMode,
+      flexible: form.flexible,
       active: editing ? editing.active : true,
       notes: form.notes.trim() || null,
     },
@@ -138,9 +150,24 @@ const GridBlockFormBody: React.FC<{
         <TextInput id="grid-block-end" variant="brand" type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} required />
       </FormField>
     </div>
-    <FormField label="Nudge Mode" htmlFor="grid-block-nudge">
-      <SelectInput id="grid-block-nudge" variant="brand" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
-    </FormField>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <FormField label="Nudge Mode" htmlFor="grid-block-nudge">
+        <SelectInput id="grid-block-nudge" variant="brand" value={form.nudgeMode} onChange={(e) => setForm((p) => ({ ...p, nudgeMode: e.target.value as NudgeMode }))} options={NUDGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))} />
+      </FormField>
+      <FormField label="Extend Behavior">
+        <button
+          type="button"
+          data-testid="grid-block-flexible-toggle"
+          aria-pressed={form.flexible}
+          onClick={() => setForm((p) => ({ ...p, flexible: !p.flexible }))}
+          className={`min-h-[44px] w-full rounded-xl border px-3 text-base sm:text-xs font-semibold transition-colors ${
+            form.flexible ? 'bg-accent/20 border-accent/50 text-accent' : 'bg-background border-border text-slate-300 hover:border-slate-600'
+          }`}
+        >
+          {form.flexible ? 'Flexible (Trim on Extend)' : 'Fixed Anchor'}
+        </button>
+      </FormField>
+    </div>
     <FormField label="Notes" htmlFor="grid-block-notes">
       <TextArea id="grid-block-notes" variant="brand" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional block intent" />
     </FormField>
