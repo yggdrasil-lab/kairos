@@ -1,0 +1,44 @@
+services:
+  kairos-web:
+    image: ${REGISTRY_PREFIX}kairos-web:${IMAGE_TAG}
+    build: .
+    environment:
+      - TZ=Pacific/Auckland
+    networks:
+      - aether-net
+    labels:
+      - "com.docker.compose.project=${STACK_NAME}"
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.kairos-web-pwa.rule=Host(`kairos.${DOMAIN_NAME}`) && (Path(`/manifest.webmanifest`, `/favicon.svg`, `/sw.js`) || PathPrefix(`/apple-touch-icon`, `/pwa-`))"
+        - "traefik.http.routers.kairos-web-pwa.entrypoints=websecure"
+        - "traefik.http.routers.kairos-web-pwa.tls=true"
+        - "traefik.http.routers.kairos-web-pwa.tls.certresolver=cloudflare"
+        - "traefik.http.routers.kairos-web-pwa.priority=100"
+        - "traefik.http.routers.kairos-web-pwa.service=kairos-web"
+        - "traefik.http.routers.kairos-web.rule=Host(`kairos.${DOMAIN_NAME}`)"
+        - "traefik.http.routers.kairos-web.entrypoints=websecure"
+        - "traefik.http.routers.kairos-web.tls=true"
+        - "traefik.http.routers.kairos-web.tls.certresolver=cloudflare"
+        - "traefik.http.routers.kairos-web.middlewares=authentik@docker"
+        - "traefik.http.routers.kairos-web.priority=10"
+        - "traefik.http.services.kairos-web.loadbalancer.server.port=8080"
+        - "traefik.docker.network=aether-net"
+
+networks:
+  aether-net:
+    external: true
