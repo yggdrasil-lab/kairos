@@ -24,6 +24,8 @@ import type { FrictionNote, GridBlock, GridBlockCreate, NudgeMode } from '../dom
 export interface GridBlockModalProps {
   isOpen: boolean;
   defaultDayOfWeek: number;
+  defaultStartMinute?: number;
+  defaultEndMinute?: number;
   editing: GridBlock | null;
   recentFriction?: FrictionNote[];
   error: string | null;
@@ -40,19 +42,26 @@ interface GridBlockFormState {
   category: string;
   nudgeMode: NudgeMode;
   flexible: boolean;
+  active: boolean;
   notes: string;
 }
 
-function buildInitialForm(defaultDayOfWeek: number, editing: GridBlock | null): GridBlockFormState {
+function buildInitialForm(
+  defaultDayOfWeek: number,
+  defaultStartMinute: number,
+  defaultEndMinute: number,
+  editing: GridBlock | null
+): GridBlockFormState {
   if (!editing) {
     return {
       title: '',
       dayOfWeek: defaultDayOfWeek,
-      startTime: '09:00',
-      endTime: '11:00',
+      startTime: minuteToTimeInput(defaultStartMinute),
+      endTime: minuteToTimeInput(defaultEndMinute),
       category: 'deep_work',
       nudgeMode: 'two-stage',
       flexible: false,
+      active: true,
       notes: '',
     };
   }
@@ -64,14 +73,12 @@ function buildInitialForm(defaultDayOfWeek: number, editing: GridBlock | null): 
     category: editing.category,
     nudgeMode: editing.nudge_mode,
     flexible: editing.flexible,
+    active: editing.active,
     notes: editing.notes ?? '',
   };
 }
 
-function validateGridBlockForm(
-  form: GridBlockFormState,
-  editing: GridBlock | null
-): { payload?: GridBlockCreate; error?: string } {
+function validateGridBlockForm(form: GridBlockFormState): { payload?: GridBlockCreate; error?: string } {
   const title = form.title.trim();
   if (!title) return { error: 'Block title is required.' };
   const startMinute = parseTimeToMinute(form.startTime);
@@ -88,7 +95,7 @@ function validateGridBlockForm(
       category: form.category,
       nudge_mode: form.nudgeMode,
       flexible: form.flexible,
-      active: editing ? editing.active : true,
+      active: form.active,
       notes: form.notes.trim() || null,
     },
   };
@@ -144,10 +151,10 @@ const GridBlockFormBody: React.FC<{
     </div>
     <div className="grid grid-cols-2 gap-3">
       <FormField label="Start" htmlFor="grid-block-start" required>
-        <TextInput id="grid-block-start" variant="brand" type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} required />
+        <TextInput id="grid-block-start" data-testid="grid-block-start-input" variant="brand" type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} required />
       </FormField>
       <FormField label="End" htmlFor="grid-block-end" required>
-        <TextInput id="grid-block-end" variant="brand" type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} required />
+        <TextInput id="grid-block-end" data-testid="grid-block-end-input" variant="brand" type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} required />
       </FormField>
     </div>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -168,6 +175,23 @@ const GridBlockFormBody: React.FC<{
         </button>
       </FormField>
     </div>
+    {isEditing && (
+      <FormField label="Schedule Status">
+        <button
+          type="button"
+          data-testid="grid-block-active-toggle"
+          aria-pressed={form.active}
+          onClick={() => setForm((p) => ({ ...p, active: !p.active }))}
+          className={`min-h-[44px] w-full rounded-xl border px-3 text-base sm:text-xs font-semibold transition-colors ${
+            form.active
+              ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200'
+              : 'bg-background border-border text-slate-400 hover:border-slate-600'
+          }`}
+        >
+          {form.active ? 'Active in Weekly Grid' : 'Paused (Inactive)'}
+        </button>
+      </FormField>
+    )}
     <FormField label="Notes" htmlFor="grid-block-notes">
       <TextArea id="grid-block-notes" variant="brand" rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional block intent" />
     </FormField>
@@ -204,6 +228,8 @@ const GridBlockFooter: React.FC<{
 export const GridBlockModal: React.FC<GridBlockModalProps> = ({
   isOpen,
   defaultDayOfWeek,
+  defaultStartMinute = 540,
+  defaultEndMinute = 660,
   editing,
   recentFriction = [],
   error,
@@ -211,19 +237,21 @@ export const GridBlockModal: React.FC<GridBlockModalProps> = ({
   onSave,
   onDelete,
 }) => {
-  const [form, setForm] = useState<GridBlockFormState>(() => buildInitialForm(defaultDayOfWeek, editing));
+  const [form, setForm] = useState<GridBlockFormState>(() =>
+    buildInitialForm(defaultDayOfWeek, defaultStartMinute, defaultEndMinute, editing)
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    setForm(buildInitialForm(defaultDayOfWeek, editing));
+    setForm(buildInitialForm(defaultDayOfWeek, defaultStartMinute, defaultEndMinute, editing));
     setValidationError(null);
-  }, [isOpen, defaultDayOfWeek, editing]);
+  }, [isOpen, defaultDayOfWeek, defaultStartMinute, defaultEndMinute, editing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = validateGridBlockForm(form, editing);
+    const result = validateGridBlockForm(form);
     if (!result.payload) {
       setValidationError(result.error ?? 'Invalid grid block input.');
       return;

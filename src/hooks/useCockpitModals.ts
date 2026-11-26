@@ -25,6 +25,8 @@ export interface CockpitModalControllers {
   gridOpen: boolean;
   editingBlock: GridBlock | null;
   defaultGridDay: number;
+  defaultGridStartMinute: number;
+  defaultGridEndMinute: number;
   cueOpen: boolean;
   editingCue: HabitCue | null;
   frictionOpen: boolean;
@@ -32,7 +34,7 @@ export interface CockpitModalControllers {
   openAddCommitment: () => void;
   openEditCommitment: (item: Commitment) => void;
   closeCommitment: () => void;
-  openAddGridBlock: (dayOfWeek?: number) => void;
+  openAddGridBlock: (dayOfWeek?: number, startMinute?: number, endMinute?: number) => void;
   openEditGridBlock: (block: GridBlock) => void;
   closeGridBlock: () => void;
   openAddCue: () => void;
@@ -61,6 +63,8 @@ function useScheduleModalState(schedule: KairosScheduleActions) {
   const [defaultGridDay, setDefaultGridDay] = useState<number>(() =>
     getAucklandWeekdayIndex(schedule.targetDate)
   );
+  const [defaultGridStartMinute, setDefaultGridStartMinute] = useState<number>(540);
+  const [defaultGridEndMinute, setDefaultGridEndMinute] = useState<number>(660);
 
   return {
     commitmentOpen,
@@ -68,6 +72,8 @@ function useScheduleModalState(schedule: KairosScheduleActions) {
     gridOpen,
     editingBlock,
     defaultGridDay,
+    defaultGridStartMinute,
+    defaultGridEndMinute,
     openAddCommitment: () => {
       schedule.clearMutationError();
       setEditingCommitment(null);
@@ -79,15 +85,19 @@ function useScheduleModalState(schedule: KairosScheduleActions) {
       setCommitmentOpen(true);
     },
     closeCommitment: () => setCommitmentOpen(false),
-    openAddGridBlock: (dayOfWeek?: number) => {
+    openAddGridBlock: (dayOfWeek?: number, startMinute?: number, endMinute?: number) => {
       schedule.clearMutationError();
       setDefaultGridDay(dayOfWeek ?? getAucklandWeekdayIndex(schedule.targetDate));
+      setDefaultGridStartMinute(startMinute ?? 540);
+      setDefaultGridEndMinute(endMinute ?? 660);
       setEditingBlock(null);
       setGridOpen(true);
     },
     openEditGridBlock: (block: GridBlock) => {
       schedule.clearMutationError();
       setDefaultGridDay(block.day_of_week);
+      setDefaultGridStartMinute(block.start_minute);
+      setDefaultGridEndMinute(block.end_minute);
       setEditingBlock(block);
       setGridOpen(true);
     },

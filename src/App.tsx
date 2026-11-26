@@ -198,7 +198,16 @@ const CockpitBody: React.FC<{
         />
       </div>
       <div className={cls.week}>
-        <WeeklyGridView blocks={data.weeklyGrid} initialDayOfWeek={getAucklandWeekdayIndex(schedule.targetDate)} onAddBlock={modals.openAddGridBlock} onEditBlock={modals.openEditGridBlock} onToggleBlockActive={(block) => void schedule.editGridBlock(block.id, { active: !block.active })} onDeleteBlock={(id) => void schedule.removeGridBlock(id)} />
+        <WeeklyGridView
+          blocks={data.weeklyGrid}
+          initialDayOfWeek={getAucklandWeekdayIndex(schedule.targetDate)}
+          todayDayOfWeek={getAucklandWeekdayIndex(schedule.targetDate)}
+          nowMinute={schedule.nowMinute}
+          onAddBlock={modals.openAddGridBlock}
+          onEditBlock={modals.openEditGridBlock}
+          onToggleBlockActive={(block) => void schedule.editGridBlock(block.id, { active: !block.active })}
+          onDeleteBlock={(id) => void schedule.removeGridBlock(id)}
+        />
       </div>
       <div className={cls.cues}>
         <CuesWorkspace cuesState={cuesState} weeklyGrid={data.weeklyGrid} onAddCue={modals.openAddCue} onEditCue={modals.openEditCue} onLogFriction={modals.openLogFriction} />
@@ -230,6 +239,8 @@ const AppModals: React.FC<{
       <GridBlockModal
         isOpen={modals.gridOpen}
         defaultDayOfWeek={modals.defaultGridDay}
+        defaultStartMinute={modals.defaultGridStartMinute}
+        defaultEndMinute={modals.defaultGridEndMinute}
         editing={modals.editingBlock}
         recentFriction={editingBlockFriction}
         error={schedule.mutationError}
