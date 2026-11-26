@@ -1,5 +1,13 @@
 import type { StatusBadgeVariant } from '@yggdrasil-lab/ui';
-import type { CommitmentSource, GridBlock, HydratedWorkout, NudgeMode } from './types';
+import type {
+  Commitment,
+  CommitmentSource,
+  DaySchedule,
+  GridBlock,
+  HydratedWorkout,
+  NudgeMode,
+  ResolvedSlice,
+} from './types';
 
 export interface WeekdayOption {
   dayOfWeek: number;
@@ -68,6 +76,60 @@ export function isReadOnlyKratos(
   readOnly?: boolean
 ): boolean {
   return source === 'kratos' || Boolean(readOnly);
+}
+
+export function sliceToFallbackCommitment(slice: ResolvedSlice, targetDate: string): Commitment {
+  return {
+    id: slice.source_id,
+    title: slice.title,
+    target_date: targetDate,
+    start_minute: slice.start_minute,
+    end_minute: slice.end_minute,
+    all_day: false,
+    source: slice.source ?? 'iris',
+    external_ref: null,
+    nudge_mode: slice.nudge_mode,
+    urgent_quiet_bypass: slice.urgent_quiet_bypass,
+    notes: slice.notes,
+    has_conflict: slice.has_conflict,
+    tentative: slice.tentative,
+    read_only: slice.read_only,
+  };
+}
+
+export function resolveCommitmentForSlice(
+  slice: ResolvedSlice,
+  daySchedule: DaySchedule | undefined,
+  targetDate: string
+): Commitment {
+  const match = daySchedule?.timed_commitments.find((c) => c.id === slice.source_id);
+  return match ?? sliceToFallbackCommitment(slice, targetDate);
+}
+
+export function getTentativeCommitments(daySchedule: DaySchedule): Commitment[] {
+  const seen = new Set<number>();
+  const result: Commitment[] = [];
+  const timedById = new Map<number, Commitment>(
+    daySchedule.timed_commitments.map((c) => [c.id, c])
+  );
+
+  const pushUnique = (item: Commitment | undefined) => {
+    if (!item || !item.tentative || seen.has(item.id)) return;
+    seen.add(item.id);
+    result.push(item);
+  };
+
+  for (const item of daySchedule.all_day_commitments) {
+    pushUnique(item);
+  }
+  for (const slice of daySchedule.slices) {
+    if (slice.kind !== 'commitment' || !slice.tentative) continue;
+    pushUnique(timedById.get(slice.source_id) ?? sliceToFallbackCommitment(slice, daySchedule.target_date));
+  }
+  for (const item of daySchedule.timed_commitments) {
+    pushUnique(item);
+  }
+  return result;
 }
 
 export function formatHydratedWorkoutDetail(

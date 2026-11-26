@@ -39,6 +39,8 @@ export interface KairosScheduleActions {
   refresh: () => Promise<void>;
   addCommitment: (payload: CommitmentCreate) => Promise<void>;
   editCommitment: (id: number, payload: CommitmentUpdate) => Promise<void>;
+  confirmCommitment: (commitmentId: number) => Promise<void>;
+  dismissCommitment: (commitmentId: number) => Promise<void>;
   removeCommitment: (id: number) => Promise<void>;
   addGridBlock: (payload: GridBlockCreate) => Promise<void>;
   editGridBlock: (id: number, payload: GridBlockUpdate) => Promise<void>;
@@ -139,6 +141,9 @@ export function useKairosSchedule(): KairosScheduleActions {
     refresh: () => loadData(targetDate, true),
     addCommitment: (payload) => runMutation(() => createCommitment(payload)),
     editCommitment: (id, payload) => runMutation(() => updateCommitment(id, payload)),
+    confirmCommitment: (commitmentId) =>
+      runMutation(() => updateCommitment(commitmentId, { tentative: false })),
+    dismissCommitment: (commitmentId) => runMutation(() => deleteCommitment(commitmentId)),
     removeCommitment: (id) => runMutation(() => deleteCommitment(id)),
     addGridBlock: (payload) => runMutation(() => createGridBlock(payload)),
     editGridBlock: (id, payload) => runMutation(() => updateGridBlock(id, payload)),

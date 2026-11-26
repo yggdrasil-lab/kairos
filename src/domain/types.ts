@@ -87,6 +87,7 @@ export interface Commitment {
   urgent_quiet_bypass: boolean;
   notes: string | null;
   has_conflict: boolean;
+  tentative: boolean;
   read_only?: boolean;
 }
 
@@ -100,6 +101,7 @@ export interface CommitmentCreate {
   external_ref?: string | null;
   nudge_mode: NudgeMode;
   urgent_quiet_bypass?: boolean;
+  tentative?: boolean;
   notes?: string | null;
 }
 
@@ -111,6 +113,7 @@ export interface CommitmentUpdate {
   all_day?: boolean;
   nudge_mode?: NudgeMode;
   urgent_quiet_bypass?: boolean;
+  tentative?: boolean;
   notes?: string | null;
 }
 
@@ -158,6 +161,7 @@ export interface ResolvedSlice {
   extension_count: number;
   notes: string | null;
   hydrated_workout?: HydratedWorkout | null;
+  tentative: boolean;
   read_only?: boolean;
 }
 

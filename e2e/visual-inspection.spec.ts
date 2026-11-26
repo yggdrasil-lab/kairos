@@ -82,6 +82,9 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(page.getByTestId('active-zone-chain-card').getByTestId('passive-signal-observed')).toContainText('Weighed in 07:15 (72.4 kg)');
       await expect(page.getByTestId('active-zone-chain-card')).toContainText('Fasted Walk 40m (Eir)');
       await expect(page.getByTestId('active-zone-chain-card')).not.toContainText(/missed|streak/i);
+      await expect(page.getByTestId('tentative-review-strip')).toContainText('Tentative from Iris');
+      await expect(page.getByTestId('tentative-review-strip')).toContainText('Flight NZ502 to Wellington');
+      await expect(page.getByTestId('tentative-review-strip')).toContainText('Dentist Checkup');
 
       await page.screenshot({
         path: `screenshots/${platform}/01-now-cockpit.png`,
@@ -124,6 +127,10 @@ for (const { name: platform, options } of PLATFORMS) {
       }).toBe(true);
 
       await expect(page.getByTestId('all-day-commitments')).toContainText('Release Freeze Window');
+      await expect(page.getByTestId('all-day-item-105')).toContainText('Flight NZ502 to Wellington');
+      await expect(page.getByTestId('all-day-item-105')).toContainText('Tentative');
+      await expect(page.getByTestId('timeline-slice-commitment-106')).toContainText('Dentist Checkup');
+      await expect(page.getByTestId('timeline-slice-commitment-106')).toContainText('Tentative');
       await expect(page.getByTestId('today-timeline')).toContainText('Conflict');
 
       const hydratedWorkoutSlice = page.getByTestId('timeline-slice-grid-4-0');
@@ -258,6 +265,88 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(page.getByTestId('all-day-commitments').getByTestId('kratos-day-header-pill')).toContainText(
         'Upper Push Focus'
       );
+    });
+
+    test(`verifies tentative commitment confirm, edit-confirm, and dismiss controls on ${platform}`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date('2026-11-25T09:30:00+13:00'));
+      await setupKairosMockApi(page);
+      await page.goto('/?tab=now');
+
+      await expect(page.getByTestId('tentative-review-strip')).toContainText('Flight NZ502 to Wellington');
+      await expect(page.getByTestId('tentative-review-strip')).toContainText('Dentist Checkup');
+
+      const confirmPatchPromise = page.waitForRequest(
+        (req) => req.url().includes('/api/commitments/105') && req.method() === 'PATCH'
+      );
+      await page.getByTestId('strip-tentative-confirm-105').click();
+      const confirmReq = await confirmPatchPromise;
+      expect(confirmReq.postDataJSON()).toEqual({ tentative: false });
+      await expect(page.getByTestId('tentative-strip-item-105')).toHaveCount(0);
+
+      if (platform !== 'desktop') {
+        await page.getByRole('button', { name: 'Today' }).click();
+      }
+      await expect(page.getByTestId('all-day-item-105')).not.toContainText('Tentative');
+
+      if (platform !== 'desktop') {
+        await page.getByRole('button', { name: 'Now' }).click();
+      }
+      await page.getByTestId('strip-tentative-edit-106').click();
+      await expect(page.getByTestId('commitment-tentative-banner')).toContainText('Tentative commitment');
+      await expect(page.getByTestId('commitment-submit-btn')).toContainText('Save & Confirm');
+      await page.getByTestId('commitment-title-input').fill('Dentist Checkup Confirmed');
+
+      const editPatchPromise = page.waitForRequest(
+        (req) => req.url().includes('/api/commitments/106') && req.method() === 'PATCH'
+      );
+      await page.getByTestId('commitment-submit-btn').click();
+      const editReq = await editPatchPromise;
+      expect(editReq.postDataJSON()).toMatchObject({
+        title: 'Dentist Checkup Confirmed',
+        tentative: false,
+      });
+      await expect(page.getByTestId('tentative-review-strip')).toHaveCount(0);
+
+      if (platform !== 'desktop') {
+        await page.getByRole('button', { name: 'Today' }).click();
+      }
+      await expect(page.getByTestId('timeline-slice-commitment-106')).toContainText('Dentist Checkup Confirmed');
+      await expect(page.getByTestId('timeline-slice-commitment-106')).not.toContainText('Tentative');
+    });
+
+    test(`verifies active/next tentative inline controls and 1-tap dismiss on ${platform}`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date('2026-11-25T09:30:00+13:00'));
+      await setupKairosMockApi(page, { activeTentativeNow: true, tentativeNext: true });
+      await page.goto('/?tab=now');
+
+      await expect(page.getByTestId('now-next-hero')).toContainText('Physio Assessment');
+      await expect(page.getByTestId('active-tentative-confirm-107')).toBeVisible();
+      await expect(page.getByTestId('active-tentative-edit-107')).toBeVisible();
+      await expect(page.getByTestId('active-tentative-dismiss-107')).toBeVisible();
+
+      await expect(page.getByTestId('now-next-upcoming')).toContainText('Design Review Sync');
+      await expect(page.getByTestId('next-tentative-confirm-102')).toBeVisible();
+      await expect(page.getByTestId('next-tentative-edit-102')).toBeVisible();
+      await expect(page.getByTestId('next-tentative-dismiss-102')).toBeVisible();
+
+      const dismissActivePromise = page.waitForRequest(
+        (req) => req.url().includes('/api/commitments/107') && req.method() === 'DELETE'
+      );
+      await page.getByTestId('active-tentative-dismiss-107').click();
+      await dismissActivePromise;
+      await expect(page.getByTestId('now-next-hero')).not.toContainText('Physio Assessment');
+
+      if (platform !== 'desktop') {
+        await page.getByRole('button', { name: 'Today' }).click();
+      }
+      await expect(page.getByTestId('timeline-slice-commitment-107')).toHaveCount(0);
+
+      const dismissAllDayPromise = page.waitForRequest(
+        (req) => req.url().includes('/api/commitments/105') && req.method() === 'DELETE'
+      );
+      await page.getByTestId('timeline-tentative-dismiss-105').click();
+      await dismissAllDayPromise;
+      await expect(page.getByTestId('all-day-item-105')).toHaveCount(0);
     });
   });
 }

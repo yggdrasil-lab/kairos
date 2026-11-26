@@ -6,6 +6,7 @@ import {
   FormField,
   Modal,
   SelectInput,
+  StatusBadge,
   TextArea,
   TextInput,
 } from '@yggdrasil-lab/ui';
@@ -137,11 +138,21 @@ const CommitmentTimeFields: React.FC<{
 const CommitmentFormBody: React.FC<{
   form: CommitmentFormState;
   setForm: React.Dispatch<React.SetStateAction<CommitmentFormState>>;
+  isTentative: boolean;
   error: string | null;
   onSubmit: (e: React.FormEvent) => void;
-}> = ({ form, setForm, error, onSubmit }) => (
+}> = ({ form, setForm, isTentative, error, onSubmit }) => (
   <form id="commitment-form" onSubmit={onSubmit} className="space-y-4">
     {Boolean(error) && <AlertBanner variant="error">{error}</AlertBanner>}
+    {isTentative && (
+      <div
+        data-testid="commitment-tentative-banner"
+        className="flex items-center justify-between gap-2 rounded-xl border border-dashed border-amber-400/45 bg-amber-500/[0.08] px-3 py-2 text-xs text-amber-200"
+      >
+        <span>Tentative commitment from Iris</span>
+        <StatusBadge label="Tentative" variant="warning" size="xs" />
+      </div>
+    )}
     <FormField label="Title" htmlFor="commitment-title" required>
       <TextInput id="commitment-title" data-testid="commitment-title-input" variant="brand" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Clinic Appointment" required />
     </FormField>
@@ -174,29 +185,37 @@ const CommitmentFormBody: React.FC<{
 
 const CommitmentFooter: React.FC<{
   isEditing: boolean;
+  isTentative: boolean;
   submitting: boolean;
   canDelete: boolean;
   onDelete: () => void;
   onClose: () => void;
-}> = ({ isEditing, submitting, canDelete, onDelete, onClose }) => (
-  <div className="flex items-center justify-between gap-2 w-full">
-    <div>
-      {isEditing && canDelete && (
-        <Button type="button" variant="danger" size="sm" disabled={submitting} data-testid="commitment-delete-btn" icon={<Trash2 className="w-4 h-4" />} onClick={onDelete} className="min-h-[44px] sm:min-h-[36px]">
-          Delete
+}> = ({ isEditing, isTentative, submitting, canDelete, onDelete, onClose }) => {
+  const submitLabel = !isEditing
+    ? 'Create Commitment'
+    : isTentative
+      ? 'Save & Confirm'
+      : 'Save Changes';
+  return (
+    <div className="flex items-center justify-between gap-2 w-full">
+      <div>
+        {isEditing && canDelete && (
+          <Button type="button" variant="danger" size="sm" disabled={submitting} data-testid="commitment-delete-btn" icon={<Trash2 className="w-4 h-4" />} onClick={onDelete} className="min-h-[44px] sm:min-h-[36px]">
+            Delete
+          </Button>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={onClose} className="min-h-[44px] sm:min-h-[36px]">
+          Cancel
         </Button>
-      )}
+        <Button type="submit" form="commitment-form" variant="brand" size="sm" loading={submitting} data-testid="commitment-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
+          {submitLabel}
+        </Button>
+      </div>
     </div>
-    <div className="flex items-center gap-2">
-      <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={onClose} className="min-h-[44px] sm:min-h-[36px]">
-        Cancel
-      </Button>
-      <Button type="submit" form="commitment-form" variant="brand" size="sm" loading={submitting} data-testid="commitment-submit-btn" className="min-h-[44px] sm:min-h-[36px]">
-        {isEditing ? 'Save Changes' : 'Create Commitment'}
-      </Button>
-    </div>
-  </div>
-);
+  );
+};
 
 export const CommitmentModal: React.FC<CommitmentModalProps> = ({
   isOpen,
@@ -210,6 +229,7 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
   const [form, setForm] = useState<CommitmentFormState>(() => buildInitialForm(defaultDate, editing));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const isTentative = Boolean(editing?.tentative);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -227,7 +247,10 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
     setValidationError(null);
     setSubmitting(true);
     try {
-      await onSave(result.payload, editing?.id ?? null);
+      const payload: CommitmentCreate = editing?.tentative
+        ? { ...result.payload, tentative: false }
+        : result.payload;
+      await onSave(payload, editing?.id ?? null);
       onClose();
     } catch {
       /* Handled via mutationError state in useKairosSchedule */
@@ -259,6 +282,7 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
       footer={
         <CommitmentFooter
           isEditing={Boolean(editing)}
+          isTentative={isTentative}
           submitting={submitting}
           canDelete={Boolean(onDelete)}
           onDelete={() => void handleDelete()}
@@ -266,7 +290,7 @@ export const CommitmentModal: React.FC<CommitmentModalProps> = ({
         />
       }
     >
-      <CommitmentFormBody form={form} setForm={setForm} error={validationError || error} onSubmit={handleSubmit} />
+      <CommitmentFormBody form={form} setForm={setForm} isTentative={isTentative} error={validationError || error} onSubmit={handleSubmit} />
     </Modal>
   );
 };
