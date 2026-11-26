@@ -225,18 +225,8 @@ const GridBlockFooter: React.FC<{
   </div>
 );
 
-export const GridBlockModal: React.FC<GridBlockModalProps> = ({
-  isOpen,
-  defaultDayOfWeek,
-  defaultStartMinute = 540,
-  defaultEndMinute = 660,
-  editing,
-  recentFriction = [],
-  error,
-  onClose,
-  onSave,
-  onDelete,
-}) => {
+function useGridBlockForm(props: GridBlockModalProps) {
+  const { isOpen, defaultDayOfWeek, defaultStartMinute = 540, defaultEndMinute = 660, editing, onClose, onSave, onDelete } = props;
   const [form, setForm] = useState<GridBlockFormState>(() =>
     buildInitialForm(defaultDayOfWeek, defaultStartMinute, defaultEndMinute, editing)
   );
@@ -261,9 +251,7 @@ export const GridBlockModal: React.FC<GridBlockModalProps> = ({
     try {
       await onSave(result.payload, editing?.id ?? null);
       onClose();
-    } catch {
-      /* Handled via mutationError state in useKairosSchedule */
-    } finally {
+    } catch { /* Handled via mutationError state in useKairosSchedule */ } finally {
       setSubmitting(false);
     }
   };
@@ -274,13 +262,17 @@ export const GridBlockModal: React.FC<GridBlockModalProps> = ({
     try {
       await onDelete(editing.id);
       onClose();
-    } catch {
-      /* Handled via mutationError state in useKairosSchedule */
-    } finally {
+    } catch { /* Handled via mutationError state in useKairosSchedule */ } finally {
       setSubmitting(false);
     }
   };
 
+  return { form, setForm, validationError, submitting, handleSubmit, handleDelete };
+}
+
+export const GridBlockModal: React.FC<GridBlockModalProps> = (props) => {
+  const { isOpen, editing, recentFriction = [], error, onClose, onDelete } = props;
+  const { form, setForm, validationError, submitting, handleSubmit, handleDelete } = useGridBlockForm(props);
   return (
     <Modal
       isOpen={isOpen}

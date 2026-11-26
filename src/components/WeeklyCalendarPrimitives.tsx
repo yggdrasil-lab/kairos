@@ -30,18 +30,15 @@ export const TimeAxisRuler: React.FC<{
     style={{ height: `${totalHeightPx}px` }}
     aria-hidden="true"
   >
-    {ticks.map((hour) => {
-      const topPx = computeTimeOffsetPx(hour * 60, startHour, pxPerHour);
-      return (
-        <span
-          key={hour}
-          style={{ top: `${topPx + 2}px` }}
-          className="absolute right-1.5 text-[10px] font-mono leading-none text-slate-500"
-        >
-          {formatMinute(hour * 60)}
-        </span>
-      );
-    })}
+    {ticks.map((hour) => (
+      <span
+        key={hour}
+        style={{ top: `${computeTimeOffsetPx(hour * 60, startHour, pxPerHour) + 2}px` }}
+        className="absolute right-1.5 text-[10px] font-mono leading-none text-slate-500"
+      >
+        {formatMinute(hour * 60)}
+      </span>
+    ))}
   </div>
 );
 
@@ -53,12 +50,11 @@ export const CalendarGridLines: React.FC<{
   <div className="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
     {ticks.map((hour) => {
       const topPx = computeTimeOffsetPx(hour * 60, startHour, pxPerHour);
-      const halfPx = topPx + pxPerHour / 2;
       return (
         <React.Fragment key={hour}>
           <div style={{ top: `${topPx}px` }} className="absolute inset-x-0 border-t border-border/40" />
           <div
-            style={{ top: `${halfPx}px` }}
+            style={{ top: `${topPx + pxPerHour / 2}px` }}
             className="absolute inset-x-0 border-t border-dashed border-border/20"
           />
         </React.Fragment>
@@ -73,9 +69,7 @@ export const CalendarNowLine: React.FC<{
   endHour: number;
   pxPerHour: number;
 }> = ({ nowMinute, startHour, endHour, pxPerHour }) => {
-  if (nowMinute < startHour * 60 || nowMinute > endHour * 60) {
-    return null;
-  }
+  if (nowMinute < startHour * 60 || nowMinute > endHour * 60) return null;
   const topPx = computeTimeOffsetPx(nowMinute, startHour, pxPerHour);
   return (
     <div
@@ -116,38 +110,12 @@ export const OpenGapPill: React.FC<{
   );
 };
 
-const BlockCardBody: React.FC<{
+const RegularBlockBody: React.FC<{
   block: GridBlock;
-  layout: BlockLayout;
-  hasVisibleQuickActions: boolean;
-}> = ({ block, layout, hasVisibleQuickActions }) => {
+  durationMinutes: number;
+  rightInset: string;
+}> = ({ block, durationMinutes, rightInset }) => {
   const categoryMeta = resolveCategoryMeta(block.category);
-  const rightInset = hasVisibleQuickActions ? 'pr-16' : '';
-
-  if (layout.density === 'micro') {
-    return (
-      <div className="px-1.5 h-full flex items-center gap-1.5 min-w-0 leading-none">
-        <span className="text-[10px] font-mono font-semibold text-slate-300 shrink-0">
-          {formatMinute(block.start_minute)}
-        </span>
-        <span className="text-[11px] font-semibold text-slate-100 truncate">{block.title}</span>
-      </div>
-    );
-  }
-
-  if (layout.density === 'compact') {
-    return (
-      <div className="px-2 py-1 h-full flex flex-col justify-center min-w-0">
-        <div className="text-[10px] font-mono font-semibold text-slate-300 truncate leading-tight">
-          {formatMinuteRange(block.start_minute, block.end_minute)}
-        </div>
-        <div className="text-[11px] font-semibold text-slate-100 truncate leading-tight">
-          {block.title}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="px-2 py-1.5 h-full flex flex-col justify-between gap-1 min-w-0">
       <div className={`space-y-0.5 min-w-0 ${rightInset}`}>
@@ -163,13 +131,69 @@ const BlockCardBody: React.FC<{
           <StatusBadge label={categoryMeta.label} variant={categoryMeta.badgeVariant} size="xs" />
           {!block.active && <StatusBadge label="Paused" variant="idle" size="xs" />}
         </div>
-        {layout.durationMinutes >= 90 && (
+        {durationMinutes >= 90 && (
           <div className="text-[10px] text-slate-400 truncate">{NUDGE_LABELS[block.nudge_mode]}</div>
         )}
       </div>
     </div>
   );
 };
+
+const BlockCardBody: React.FC<{
+  block: GridBlock;
+  layout: BlockLayout;
+  hasVisibleQuickActions: boolean;
+}> = ({ block, layout, hasVisibleQuickActions }) => {
+  if (layout.density === 'micro') {
+    return (
+      <div className="px-1.5 h-full flex items-center gap-1.5 min-w-0 leading-none">
+        <span className="text-[10px] font-mono font-semibold text-slate-300 shrink-0">
+          {formatMinute(block.start_minute)}
+        </span>
+        <span className="text-[11px] font-semibold text-slate-100 truncate">{block.title}</span>
+      </div>
+    );
+  }
+  if (layout.density === 'compact') {
+    return (
+      <div className="px-2 py-1 h-full flex flex-col justify-center min-w-0">
+        <div className="text-[10px] font-mono font-semibold text-slate-300 truncate leading-tight">
+          {formatMinuteRange(block.start_minute, block.end_minute)}
+        </div>
+        <div className="text-[11px] font-semibold text-slate-100 truncate leading-tight">
+          {block.title}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <RegularBlockBody
+      block={block}
+      durationMinutes={layout.durationMinutes}
+      rightInset={hasVisibleQuickActions ? 'pr-16' : ''}
+    />
+  );
+};
+
+const ActionIconBtn: React.FC<{
+  label: string;
+  className: string;
+  onAction: () => void;
+  children: React.ReactNode;
+}> = ({ label, className, onAction, children }) => (
+  <Button
+    variant="ghost"
+    size="xs"
+    aria-label={label}
+    onClick={(e) => {
+      e.stopPropagation();
+      onAction();
+    }}
+    className={className}
+  >
+    {children}
+  </Button>
+);
 
 const BlockActionControls: React.FC<{
   block: GridBlock;
@@ -179,58 +203,34 @@ const BlockActionControls: React.FC<{
   onToggleActive: (block: GridBlock) => void;
   onDelete: (id: number) => void;
 }> = ({ block, isMobile, density, onEdit, onToggleActive, onDelete }) => {
-  if (isMobile && density !== 'regular') {
-    return null;
-  }
+  if (isMobile && density !== 'regular') return null;
   const visibilityClass = isMobile
     ? 'opacity-100'
     : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
   const btnSizeClass = isMobile
     ? 'min-h-[34px] min-w-[34px] justify-center px-1'
     : 'min-h-[24px] min-w-[24px] justify-center px-1';
+  const toggleLabel = `${block.active ? 'Pause' : 'Resume'} ${block.title}`;
 
   return (
     <div
       className={`absolute top-1 right-1 z-20 flex items-center gap-0.5 rounded-md bg-background/90 backdrop-blur-sm border border-border/60 p-0.5 transition-opacity ${visibilityClass}`}
     >
       {!isMobile && (
-        <Button
-          variant="ghost"
-          size="xs"
-          aria-label={`Edit ${block.title}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(block);
-          }}
-          className={btnSizeClass}
-        >
+        <ActionIconBtn label={`Edit ${block.title}`} className={btnSizeClass} onAction={() => onEdit(block)}>
           <Edit2 className="w-3 h-3" />
-        </Button>
+        </ActionIconBtn>
       )}
-      <Button
-        variant="ghost"
-        size="xs"
-        aria-label={`${block.active ? 'Pause' : 'Resume'} ${block.title}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleActive(block);
-        }}
-        className={btnSizeClass}
-      >
+      <ActionIconBtn label={toggleLabel} className={btnSizeClass} onAction={() => onToggleActive(block)}>
         {block.active ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
-      </Button>
-      <Button
-        variant="ghost"
-        size="xs"
-        aria-label={`Delete ${block.title}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(block.id);
-        }}
+      </ActionIconBtn>
+      <ActionIconBtn
+        label={`Delete ${block.title}`}
         className={`${btnSizeClass} text-slate-400 hover:text-rose-300`}
+        onAction={() => onDelete(block.id)}
       >
         <Trash2 className="w-3.5 h-3.5" />
-      </Button>
+      </ActionIconBtn>
     </div>
   );
 };
@@ -245,8 +245,6 @@ export const CalendarBlockCard: React.FC<{
 }> = ({ block, layout, isMobile, onEdit, onToggleActive, onDelete }) => {
   const colorStyle = resolveCategoryCalendarStyle(block.category);
   const stateStyle = block.active ? '' : 'opacity-55 border-dashed';
-  const hasVisibleQuickActions = isMobile && layout.density === 'regular';
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
@@ -254,7 +252,6 @@ export const CalendarBlockCard: React.FC<{
       onEdit(block);
     }
   };
-
   return (
     <div
       style={{ top: `${layout.topPx}px`, height: `${layout.heightPx}px` }}
@@ -269,7 +266,11 @@ export const CalendarBlockCard: React.FC<{
         onKeyDown={handleKeyDown}
         className={`h-full w-full rounded-lg border border-l-[3px] overflow-hidden text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${colorStyle} ${stateStyle}`}
       >
-        <BlockCardBody block={block} layout={layout} hasVisibleQuickActions={hasVisibleQuickActions} />
+        <BlockCardBody
+          block={block}
+          layout={layout}
+          hasVisibleQuickActions={isMobile && layout.density === 'regular'}
+        />
       </div>
       <BlockActionControls
         block={block}
@@ -301,66 +302,29 @@ export interface DayCalendarCanvasProps {
   onDeleteBlock: (blockId: number) => void;
 }
 
-export const DayCalendarCanvas: React.FC<DayCalendarCanvasProps> = ({
-  dayOfWeek,
-  dayBlocks,
-  startHour,
-  endHour,
-  pxPerHour,
-  hourTicks,
-  isToday,
-  nowMinute,
-  isMobile,
-  testId,
-  className = '',
-  onAddBlock,
-  onEditBlock,
-  onToggleBlockActive,
-  onDeleteBlock,
-}) => {
+export const DayCalendarCanvas: React.FC<DayCalendarCanvasProps> = (props) => {
+  const { dayOfWeek, dayBlocks, startHour, endHour, pxPerHour, hourTicks, isToday, nowMinute, isMobile, testId, className = '', onAddBlock, onEditBlock, onToggleBlockActive, onDeleteBlock } = props;
   const totalHeightPx = (endHour - startHour) * pxPerHour;
   const gaps = computeOpenGaps(dayBlocks, startHour, endHour);
 
   return (
-    <div
-      data-testid={testId}
-      style={{ height: `${totalHeightPx}px` }}
-      className={`relative min-w-0 ${className}`}
-    >
+    <div data-testid={testId} style={{ height: `${totalHeightPx}px` }} className={`relative min-w-0 ${className}`}>
       <CalendarGridLines ticks={hourTicks} startHour={startHour} pxPerHour={pxPerHour} />
       {gaps.map((gap) => (
-        <OpenGapPill
-          key={`${dayOfWeek}-${gap.startMinute}`}
-          dayOfWeek={dayOfWeek}
-          gap={gap}
-          startHour={startHour}
-          pxPerHour={pxPerHour}
-          onSelectGap={onAddBlock}
+        <OpenGapPill key={`${dayOfWeek}-${gap.startMinute}`} dayOfWeek={dayOfWeek} gap={gap} startHour={startHour} pxPerHour={pxPerHour} onSelectGap={onAddBlock} />
+      ))}
+      {dayBlocks.map((block, index) => (
+        <CalendarBlockCard
+          key={block.id}
+          block={block}
+          layout={computeBlockLayout(block, startHour, pxPerHour, dayBlocks[index + 1]?.start_minute)}
+          isMobile={isMobile}
+          onEdit={onEditBlock}
+          onToggleActive={onToggleBlockActive}
+          onDelete={onDeleteBlock}
         />
       ))}
-      {dayBlocks.map((block, index) => {
-        const nextBlockStart = dayBlocks[index + 1]?.start_minute;
-        const layout = computeBlockLayout(block, startHour, pxPerHour, nextBlockStart);
-        return (
-          <CalendarBlockCard
-            key={block.id}
-            block={block}
-            layout={layout}
-            isMobile={isMobile}
-            onEdit={onEditBlock}
-            onToggleActive={onToggleBlockActive}
-            onDelete={onDeleteBlock}
-          />
-        );
-      })}
-      {isToday && (
-        <CalendarNowLine
-          nowMinute={nowMinute}
-          startHour={startHour}
-          endHour={endHour}
-          pxPerHour={pxPerHour}
-        />
-      )}
+      {isToday && <CalendarNowLine nowMinute={nowMinute} startHour={startHour} endHour={endHour} pxPerHour={pxPerHour} />}
     </div>
   );
 };

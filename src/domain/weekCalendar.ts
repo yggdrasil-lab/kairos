@@ -93,6 +93,21 @@ export function computeBlockLayout(
   };
 }
 
+function collectActiveIntervals(
+  dayBlocks: readonly GridBlock[],
+  windowStart: number,
+  windowEnd: number
+): { start: number; end: number }[] {
+  return dayBlocks
+    .filter((block) => block.active)
+    .map((block) => ({
+      start: Math.max(windowStart, block.start_minute),
+      end: Math.min(windowEnd, block.end_minute),
+    }))
+    .filter((interval) => interval.end > interval.start)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
 export function computeOpenGaps(
   dayBlocks: readonly GridBlock[],
   startHour: number,
@@ -103,35 +118,23 @@ export function computeOpenGaps(
   const windowEnd = Math.min(endHour * 60, DEFAULT_WAKING_END_MINUTE);
   if (windowEnd <= windowStart) return [];
 
-  const activeSorted = dayBlocks
-    .filter((block) => block.active)
-    .slice()
-    .sort((a, b) => a.start_minute - b.start_minute || a.end_minute - b.end_minute);
-
   const gaps: OpenGap[] = [];
   let cursor = windowStart;
 
-  for (const block of activeSorted) {
-    const clampedStart = Math.max(windowStart, block.start_minute);
-    const clampedEnd = Math.min(windowEnd, block.end_minute);
-    if (clampedEnd <= clampedStart) continue;
-
-    if (clampedStart > cursor) {
-      const durationMinutes = clampedStart - cursor;
-      if (durationMinutes >= minGapMinutes) {
-        gaps.push({ startMinute: cursor, endMinute: clampedStart, durationMinutes });
-      }
+  for (const interval of collectActiveIntervals(dayBlocks, windowStart, windowEnd)) {
+    if (interval.start - cursor >= minGapMinutes) {
+      gaps.push({
+        startMinute: cursor,
+        endMinute: interval.start,
+        durationMinutes: interval.start - cursor,
+      });
     }
-    cursor = Math.max(cursor, clampedEnd);
+    cursor = Math.max(cursor, interval.end);
   }
 
-  if (windowEnd > cursor) {
-    const durationMinutes = windowEnd - cursor;
-    if (durationMinutes >= minGapMinutes) {
-      gaps.push({ startMinute: cursor, endMinute: windowEnd, durationMinutes });
-    }
+  if (windowEnd - cursor >= minGapMinutes) {
+    gaps.push({ startMinute: cursor, endMinute: windowEnd, durationMinutes: windowEnd - cursor });
   }
-
   return gaps;
 }
 
