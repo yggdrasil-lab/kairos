@@ -148,14 +148,21 @@ for (const { name: platform, options } of PLATFORMS) {
         animations: 'disabled',
       });
 
+      const weekGrid =
+        platform === 'desktop'
+          ? page.getByTestId('weekly-grid-desktop')
+          : page.getByTestId('weekly-grid-mobile');
+
       if (platform === 'desktop') {
         await page.getByTestId('desktop-tab-week').click();
-        await expect(page.getByTestId('weekly-grid-desktop')).toBeVisible();
+        await expect(weekGrid).toBeVisible();
+        await expect(weekGrid.getByTestId('week-column-2').getByTestId('week-now-line')).toBeVisible();
       } else {
         await page.getByRole('button', { name: 'Week' }).click();
-        await expect(page.getByTestId('weekly-grid-mobile')).toBeVisible();
+        await expect(weekGrid).toBeVisible();
+        await expect(weekGrid.getByTestId('week-now-line')).toBeVisible();
         await page.getByTestId('week-day-pill-0').click();
-        await expect(page.getByTestId('weekly-grid-mobile')).toContainText('Monday Deep Work');
+        await expect(weekGrid).toContainText('Monday Deep Work');
 
         const hasHorizontalOverflow = await page.evaluate(
           () => document.documentElement.scrollWidth > window.innerWidth + 1
@@ -163,11 +170,30 @@ for (const { name: platform, options } of PLATFORMS) {
         expect(hasHorizontalOverflow).toBe(false);
       }
 
+      await expect(weekGrid).toContainText('07:00');
+      await expect(weekGrid).toContainText('12:00');
+      await expect(weekGrid).toContainText('18:00');
+      await expect(weekGrid.locator('[data-testid^="week-gap-"]').first()).toBeVisible();
+      await expect(weekGrid.getByTestId('grid-block-9')).toContainText('Midday Reset');
+
+      const earlierBox = await weekGrid.getByTestId('grid-block-1').boundingBox();
+      const laterBox = await weekGrid.getByTestId('grid-block-9').boundingBox();
+      expect(earlierBox).not.toBeNull();
+      expect(laterBox).not.toBeNull();
+      expect(laterBox!.y).toBeGreaterThan(earlierBox!.y + earlierBox!.height + 20);
+
       await page.screenshot({
         path: `screenshots/${platform}/03-weekly-grid.png`,
         fullPage: platform === 'desktop',
         animations: 'disabled',
       });
+
+      await weekGrid.getByTestId('week-gap-0-720').click();
+      await expect(page.getByRole('heading', { name: 'Add Weekly Grid Block' })).toBeVisible();
+      await expect(page.getByTestId('grid-block-start-input')).toHaveValue('12:00');
+      await expect(page.getByTestId('grid-block-end-input')).toHaveValue('13:00');
+      await page.getByRole('button', { name: 'Cancel' }).click();
+      await expect(page.getByTestId('grid-block-start-input')).toBeHidden();
 
       await page.getByTestId('add-grid-block-btn').click();
       await expect(page.getByTestId('grid-block-flexible-toggle')).toBeVisible();

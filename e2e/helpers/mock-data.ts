@@ -35,6 +35,8 @@ const INITIAL_WEEKLY_GRID: GridBlock[] = [
   { id: 6, title: 'Friday Weekly Retro', day_of_week: 4, start_minute: 900, end_minute: 960, category: 'admin', nudge_mode: 'boundary', flexible: true, active: true, notes: null },
   { id: 7, title: 'Saturday Trail Run', day_of_week: 5, start_minute: 480, end_minute: 570, category: 'health', nudge_mode: 'none', flexible: false, active: true, notes: null },
   { id: 8, title: 'Sunday Weekly Reset', day_of_week: 6, start_minute: 960, end_minute: 1050, category: 'personal', nudge_mode: 'boundary', flexible: true, active: true, notes: null },
+  { id: 9, title: 'Midday Reset', day_of_week: 0, start_minute: 810, end_minute: 825, category: 'personal', nudge_mode: 'none', flexible: true, active: true, notes: '15m posture and water break' },
+  { id: 10, title: 'Evening Wind-Down', day_of_week: 2, start_minute: 1230, end_minute: 1260, category: 'general', nudge_mode: 'boundary', flexible: true, active: true, notes: '30m shutdown ritual' },
 ];
 
 const INITIAL_COMMITMENTS: Commitment[] = [
@@ -449,6 +451,25 @@ async function handleApiRoute(route: Route, store: MockStore): Promise<void> {
     const created: GridBlock = { id: store.nextId++, ...body, flexible: Boolean(body.flexible), active: body.active ?? true };
     store.weeklyGrid.push(created);
     await route.fulfill({ status: 201, json: created });
+    return;
+  }
+  if (path.startsWith('/weekly-grid/blocks/') && method === 'PATCH') {
+    const id = Number(path.split('/').pop());
+    const idx = store.weeklyGrid.findIndex((b) => b.id === id);
+    if (idx < 0) {
+      await route.fulfill({ status: 404, json: { detail: 'Grid block not found' } });
+      return;
+    }
+    const patch = request.postDataJSON() as Partial<GridBlock>;
+    store.weeklyGrid[idx] = { ...store.weeklyGrid[idx], ...patch };
+    await route.fulfill({ json: store.weeklyGrid[idx] });
+    return;
+  }
+  if (path.startsWith('/weekly-grid/blocks/') && method === 'DELETE') {
+    const id = Number(path.split('/').pop());
+    const idx = store.weeklyGrid.findIndex((b) => b.id === id);
+    if (idx >= 0) store.weeklyGrid.splice(idx, 1);
+    await route.fulfill({ status: 204, body: '' });
     return;
   }
   if (await handlePushRoutes(route, store, path, method)) return;
