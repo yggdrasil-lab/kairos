@@ -19,6 +19,8 @@ import type {
 export interface MockApiOptions {
   dayHeaderFallback?: boolean;
   activeWorkoutNow?: boolean;
+  tentativeNext?: boolean;
+  activeTentativeNow?: boolean;
 }
 
 const TARGET_DATE = '2026-11-25';
@@ -36,10 +38,12 @@ const INITIAL_WEEKLY_GRID: GridBlock[] = [
 ];
 
 const INITIAL_COMMITMENTS: Commitment[] = [
-  { id: 101, title: 'Release Freeze Window', target_date: TARGET_DATE, start_minute: null, end_minute: null, all_day: true, source: 'iris', external_ref: 'cal-all-day-101', nudge_mode: 'none', urgent_quiet_bypass: false, notes: 'Production change window', has_conflict: false },
-  { id: 102, title: 'Design Review Sync', target_date: TARGET_DATE, start_minute: 600, end_minute: 708, all_day: false, source: 'iris', external_ref: 'cal-102', nudge_mode: 'boundary', urgent_quiet_bypass: false, notes: 'Carves Wednesday Deep Work leaving <15m tail suppressed', has_conflict: true },
-  { id: 103, title: 'Morning Swim (Kratos)', target_date: TARGET_DATE, start_minute: 420, end_minute: 465, all_day: false, source: 'kratos', external_ref: 'kratos-session-401', nudge_mode: 'none', urgent_quiet_bypass: false, notes: '1500m aerobic swim', has_conflict: false, read_only: true },
-  { id: 104, title: 'Architecture Sync', target_date: TARGET_DATE, start_minute: 660, end_minute: 720, all_day: false, source: 'manual', external_ref: null, nudge_mode: 'two-stage', urgent_quiet_bypass: false, notes: 'Overlaps Design Review Sync', has_conflict: true },
+  { id: 101, title: 'Release Freeze Window', target_date: TARGET_DATE, start_minute: null, end_minute: null, all_day: true, source: 'iris', external_ref: 'cal-all-day-101', nudge_mode: 'none', urgent_quiet_bypass: false, notes: 'Production change window', has_conflict: false, tentative: false },
+  { id: 102, title: 'Design Review Sync', target_date: TARGET_DATE, start_minute: 600, end_minute: 708, all_day: false, source: 'iris', external_ref: 'cal-102', nudge_mode: 'boundary', urgent_quiet_bypass: false, notes: 'Carves Wednesday Deep Work leaving <15m tail suppressed', has_conflict: true, tentative: false },
+  { id: 103, title: 'Morning Swim (Kratos)', target_date: TARGET_DATE, start_minute: 420, end_minute: 465, all_day: false, source: 'kratos', external_ref: 'kratos-session-401', nudge_mode: 'none', urgent_quiet_bypass: false, notes: '1500m aerobic swim', has_conflict: false, tentative: false, read_only: true },
+  { id: 104, title: 'Architecture Sync', target_date: TARGET_DATE, start_minute: 660, end_minute: 720, all_day: false, source: 'manual', external_ref: null, nudge_mode: 'two-stage', urgent_quiet_bypass: false, notes: 'Overlaps Design Review Sync', has_conflict: true, tentative: false },
+  { id: 105, title: 'Flight NZ502 to Wellington', target_date: TARGET_DATE, start_minute: null, end_minute: null, all_day: true, source: 'iris', external_ref: 'iris-tentative-105', nudge_mode: 'none', urgent_quiet_bypass: false, notes: 'Synthetic itinerary from email', has_conflict: false, tentative: true },
+  { id: 106, title: 'Dentist Checkup', target_date: TARGET_DATE, start_minute: 840, end_minute: 885, all_day: false, source: 'iris', external_ref: 'iris-tentative-106', nudge_mode: 'boundary', urgent_quiet_bypass: false, notes: 'Synthetic 14:00 City Dental appointment', has_conflict: false, tentative: true },
 ];
 
 const PLANNED_GRID_WORKOUT: HydratedWorkout = {
@@ -73,8 +77,8 @@ const COMPLETED_KRATOS_SESSIONS: CompletedKratosSession[] = [
 ];
 
 const INITIAL_GRID_SLICES: ResolvedSlice[] = [
-  { slice_id: 'grid-3-0', kind: 'grid_block', source_id: 3, title: 'Wednesday Deep Work', start_minute: 540, end_minute: 600, category: 'deep_work', source: null, nudge_mode: 'two-stage', flexible: false, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: true, extension_count: 0, notes: 'Carved before 10:00 sync (<15m tail after 11:48 suppressed)' },
-  { slice_id: 'grid-4-0', kind: 'grid_block', source_id: 4, title: 'Evening Mobility', start_minute: 1050, end_minute: 1110, category: 'health', source: null, nudge_mode: 'boundary', flexible: true, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: false, extension_count: 0, notes: 'Stretch and zone 2 walk', hydrated_workout: PLANNED_GRID_WORKOUT },
+  { slice_id: 'grid-3-0', kind: 'grid_block', source_id: 3, title: 'Wednesday Deep Work', start_minute: 540, end_minute: 600, category: 'deep_work', source: null, nudge_mode: 'two-stage', flexible: false, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: true, extension_count: 0, tentative: false, notes: 'Carved before 10:00 sync (<15m tail after 11:48 suppressed)' },
+  { slice_id: 'grid-4-0', kind: 'grid_block', source_id: 4, title: 'Evening Mobility', start_minute: 1050, end_minute: 1110, category: 'health', source: null, nudge_mode: 'boundary', flexible: true, urgent_quiet_bypass: false, has_conflict: false, suppressed_tail: false, extension_count: 0, tentative: false, notes: 'Stretch and zone 2 walk', hydrated_workout: PLANNED_GRID_WORKOUT },
 ];
 
 const INITIAL_CUES: Omit<HabitCue, 'recent_friction'>[] = [
@@ -212,6 +216,7 @@ function toCommitmentSlice(item: Commitment): ResolvedSlice {
     suppressed_tail: false,
     extension_count: 0,
     notes: item.notes,
+    tentative: item.tentative,
     read_only: item.read_only,
   };
 }
@@ -469,9 +474,22 @@ async function handleCommitmentMutation(route: Route, store: MockStore, path: st
       urgent_quiet_bypass: Boolean(body.urgent_quiet_bypass),
       notes: body.notes ?? null,
       has_conflict: false,
+      tentative: Boolean(body.tentative),
     };
     store.commitments.push(created);
     await route.fulfill({ status: 201, json: created });
+    return;
+  }
+  if (path.startsWith('/commitments/') && method === 'PATCH') {
+    const id = Number(path.split('/').pop());
+    const idx = store.commitments.findIndex((c) => c.id === id);
+    if (idx < 0) {
+      await route.fulfill({ status: 404, json: { detail: 'Commitment not found' } });
+      return;
+    }
+    const patch = route.request().postDataJSON() as Partial<Commitment>;
+    store.commitments[idx] = { ...store.commitments[idx], ...patch };
+    await route.fulfill({ json: store.commitments[idx] });
     return;
   }
   if (path.startsWith('/commitments/') && method === 'DELETE') {
@@ -488,7 +506,8 @@ export async function setupKairosMockApi(
   page: Page,
   options: MockApiOptions = {}
 ): Promise<void> {
-  const gridSlices = INITIAL_GRID_SLICES.map((s) => ({ ...s }));
+  let gridSlices = INITIAL_GRID_SLICES.map((s) => ({ ...s }));
+  const commitments = INITIAL_COMMITMENTS.map((c) => ({ ...c }));
   if (options.activeWorkoutNow) {
     gridSlices[0] = {
       ...gridSlices[0],
@@ -497,6 +516,28 @@ export async function setupKairosMockApi(
       hydrated_workout: { ...PLANNED_GRID_WORKOUT, attached_grid_block_id: 3 },
     };
   }
+  if (options.tentativeNext) {
+    const nextItem = commitments.find((c) => c.id === 102);
+    if (nextItem) nextItem.tentative = true;
+  }
+  if (options.activeTentativeNow) {
+    gridSlices = gridSlices.filter((s) => s.slice_id !== 'grid-3-0');
+    commitments.push({
+      id: 107,
+      title: 'Physio Assessment',
+      target_date: TARGET_DATE,
+      start_minute: 540,
+      end_minute: 600,
+      all_day: false,
+      source: 'iris',
+      external_ref: 'iris-tentative-107',
+      nudge_mode: 'boundary',
+      urgent_quiet_bypass: false,
+      notes: 'Synthetic active tentative block',
+      has_conflict: false,
+      tentative: true,
+    });
+  }
   const plannedWorkout = options.dayHeaderFallback
     ? { ...PLANNED_DAY_HEADER_WORKOUT }
     : { ...PLANNED_GRID_WORKOUT };
@@ -504,7 +545,7 @@ export async function setupKairosMockApi(
   const store: MockStore = {
     weeklyGrid: INITIAL_WEEKLY_GRID.map((b) => ({ ...b })),
     gridSlices,
-    commitments: INITIAL_COMMITMENTS.map((c) => ({ ...c })),
+    commitments,
     exceptions: [],
     cues: INITIAL_CUES.map((c) => ({ ...c, grid_block_ids: [...c.grid_block_ids] })),
     frictionNotes: INITIAL_FRICTION_NOTES.map((n) => ({ ...n })),

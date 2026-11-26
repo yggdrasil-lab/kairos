@@ -6,19 +6,38 @@ import {
   formatDuration,
   formatHydratedWorkoutDetail,
   formatMinuteRange,
+  getTentativeCommitments,
   isReadOnlyKratos,
   NUDGE_LABELS,
   resolveCategoryMeta,
+  resolveCommitmentForSlice,
   SOURCE_META,
 } from '../domain/schedule';
-import type { DayWorkoutHydration, ExtendMinutes, NowNextState, ResolvedSlice } from '../domain/types';
+import type {
+  Commitment,
+  DaySchedule,
+  DayWorkoutHydration,
+  ExtendMinutes,
+  NowNextState,
+  ResolvedSlice,
+} from '../domain/types';
 import { HydratedWorkoutBadge, KratosDayHeaderPill } from './HydratedWorkoutBadge';
+import {
+  TENTATIVE_SURFACE_CLASS,
+  TentativeActionButtons,
+  TentativeBadge,
+  TentativeReviewStrip,
+} from './TentativeControls';
 
 export interface NowNextHeroProps {
   nowNext: NowNextState;
+  daySchedule?: DaySchedule;
   workoutHydration?: DayWorkoutHydration | null;
   onAddCommitment: () => void;
   onExtendBlock?: (gridBlockId: number, minutes: ExtendMinutes) => Promise<void> | void;
+  onConfirmCommitment?: (commitmentId: number) => void;
+  onEditCommitment?: (commitment: Commitment) => void;
+  onDismissCommitment?: (commitmentId: number) => void;
   isExtending?: boolean;
 }
 
@@ -108,6 +127,7 @@ const ActiveSliceHeader: React.FC<{ slice: ResolvedSlice }> = ({ slice }) => {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
+        {slice.kind === 'commitment' && slice.tentative && <TentativeBadge />}
         {slice.extension_count > 0 && (
           <span data-testid="active-extended-badge">
             <StatusBadge label={`Extended x${slice.extension_count}`} variant="warning" size="xs" />
@@ -129,11 +149,32 @@ const ActiveSliceHeader: React.FC<{ slice: ResolvedSlice }> = ({ slice }) => {
 const ActiveSliceContent: React.FC<{
   slice: ResolvedSlice;
   nowMinute: number;
+  targetDate: string;
+  daySchedule?: DaySchedule;
   onExtendBlock?: (gridBlockId: number, minutes: ExtendMinutes) => Promise<void> | void;
+  onConfirmCommitment?: (commitmentId: number) => void;
+  onEditCommitment?: (commitment: Commitment) => void;
+  onDismissCommitment?: (commitmentId: number) => void;
   isExtending: boolean;
-}> = ({ slice, nowMinute, onExtendBlock, isExtending }) => {
+}> = ({
+  slice,
+  nowMinute,
+  targetDate,
+  daySchedule,
+  onExtendBlock,
+  onConfirmCommitment,
+  onEditCommitment,
+  onDismissCommitment,
+  isExtending,
+}) => {
   const progress = computeSliceProgress(slice.start_minute, slice.end_minute, nowMinute);
   const workoutDetail = formatHydratedWorkoutDetail(slice.hydrated_workout, true);
+  const showTentativeActions =
+    slice.kind === 'commitment' &&
+    slice.tentative &&
+    Boolean(onConfirmCommitment) &&
+    Boolean(onEditCommitment) &&
+    Boolean(onDismissCommitment);
   return (
     <div className="space-y-3">
       <ActiveSliceHeader slice={slice} />
@@ -147,6 +188,16 @@ const ActiveSliceContent: React.FC<{
       </div>
       <TransitionWrapupBanner slice={slice} remainingMinutes={progress.remainingMinutes} />
       <ExtendRecoveryControls slice={slice} onExtendBlock={onExtendBlock} isExtending={isExtending} />
+      {showTentativeActions && onConfirmCommitment && onEditCommitment && onDismissCommitment && (
+        <TentativeActionButtons
+          commitmentId={slice.source_id}
+          title={slice.title}
+          testIdPrefix="active-tentative"
+          onConfirm={onConfirmCommitment}
+          onEdit={() => onEditCommitment(resolveCommitmentForSlice(slice, daySchedule, targetDate))}
+          onDismiss={onDismissCommitment}
+        />
+      )}
     </div>
   );
 };
@@ -197,9 +248,22 @@ const HeroAlerts: React.FC<{ activeItems: ResolvedSlice[]; suppressedTail: boole
   </>
 );
 
-const UpcomingPreview: React.FC<{ nextSlice: ResolvedSlice | undefined; nowMinute: number }> = ({
+const UpcomingPreview: React.FC<{
+  nextSlice: ResolvedSlice | undefined;
+  nowMinute: number;
+  targetDate: string;
+  daySchedule?: DaySchedule;
+  onConfirmCommitment?: (commitmentId: number) => void;
+  onEditCommitment?: (commitment: Commitment) => void;
+  onDismissCommitment?: (commitmentId: number) => void;
+}> = ({
   nextSlice,
   nowMinute,
+  targetDate,
+  daySchedule,
+  onConfirmCommitment,
+  onEditCommitment,
+  onDismissCommitment,
 }) => {
   if (!nextSlice) {
     return (
@@ -210,25 +274,45 @@ const UpcomingPreview: React.FC<{ nextSlice: ResolvedSlice | undefined; nowMinut
     );
   }
   const startsIn = Math.max(0, nextSlice.start_minute - nowMinute);
+  const isTentative = nextSlice.kind === 'commitment' && nextSlice.tentative;
+  const showActions =
+    isTentative && Boolean(onConfirmCommitment) && Boolean(onEditCommitment) && Boolean(onDismissCommitment);
   return (
-    <div data-testid="now-next-upcoming" className="pt-3 border-t border-border/70 flex flex-wrap items-center justify-between gap-2 text-xs">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold uppercase tracking-wider text-[10px]">Next</span>
-        <span className="font-semibold text-slate-200 truncate">{nextSlice.title}</span>
+    <div data-testid="now-next-upcoming" className="pt-3 border-t border-border/70 space-y-2 text-xs">
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${isTentative ? `rounded-xl border p-2.5 ${TENTATIVE_SURFACE_CLASS}` : ''}`}>
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold uppercase tracking-wider text-[10px]">Next</span>
+          <span className="font-semibold text-slate-200 truncate">{nextSlice.title}</span>
+          {isTentative && <TentativeBadge />}
+        </div>
+        <div className="flex items-center gap-2 font-mono text-slate-400">
+          <span>{formatMinuteRange(nextSlice.start_minute, nextSlice.end_minute)}</span>
+          <span className="text-secondary font-semibold">in {formatDuration(startsIn)}</span>
+        </div>
       </div>
-      <div className="flex items-center gap-2 font-mono text-slate-400">
-        <span>{formatMinuteRange(nextSlice.start_minute, nextSlice.end_minute)}</span>
-        <span className="text-secondary font-semibold">in {formatDuration(startsIn)}</span>
-      </div>
+      {showActions && onConfirmCommitment && onEditCommitment && onDismissCommitment && (
+        <TentativeActionButtons
+          commitmentId={nextSlice.source_id}
+          title={nextSlice.title}
+          testIdPrefix="next-tentative"
+          onConfirm={onConfirmCommitment}
+          onEdit={() => onEditCommitment(resolveCommitmentForSlice(nextSlice, daySchedule, targetDate))}
+          onDismiss={onDismissCommitment}
+        />
+      )}
     </div>
   );
 };
 
 export const NowNextHero: React.FC<NowNextHeroProps> = ({
   nowNext,
+  daySchedule,
   workoutHydration,
   onAddCommitment,
   onExtendBlock,
+  onConfirmCommitment,
+  onEditCommitment,
+  onDismissCommitment,
   isExtending = false,
 }) => {
   const active = nowNext.active_slice;
@@ -239,9 +323,21 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
     effectiveHydration?.planned_workout?.placement === 'day_header'
       ? effectiveHydration.planned_workout
       : null;
+  const activeTentative = active?.kind === 'commitment' && active.tentative;
+  const nextSlice = nowNext.upcoming[0];
+  const activeCommitmentId = active?.kind === 'commitment' ? active.source_id : null;
+  const nextCommitmentId = nextSlice?.kind === 'commitment' && nextSlice.tentative ? nextSlice.source_id : null;
+  const stripItems = daySchedule
+    ? getTentativeCommitments(daySchedule).filter(
+        (item) => item.id !== activeCommitmentId && item.id !== nextCommitmentId
+      )
+    : [];
 
   return (
-    <GlassCard data-testid="now-next-hero" className="space-y-4 border-accent/25">
+    <GlassCard
+      data-testid="now-next-hero"
+      className={`space-y-4 ${activeTentative ? 'border-dashed border-amber-400/50' : 'border-accent/25'}`}
+    >
       <HeroBadgeRow
         hasActive={Boolean(active)}
         isQuietHours={nowNext.is_quiet_hours}
@@ -254,14 +350,35 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
         <ActiveSliceContent
           slice={active}
           nowMinute={nowNext.now_minute}
+          targetDate={nowNext.target_date}
+          daySchedule={daySchedule}
           onExtendBlock={onExtendBlock}
+          onConfirmCommitment={onConfirmCommitment}
+          onEditCommitment={onEditCommitment}
+          onDismissCommitment={onDismissCommitment}
           isExtending={isExtending}
         />
       ) : (
         <OpenTimeContent openMinutes={nowNext.open_time_minutes} onAddCommitment={onAddCommitment} />
       )}
       <HeroAlerts activeItems={nowNext.active_items} suppressedTail={suppressedTail} />
-      <UpcomingPreview nextSlice={nowNext.upcoming[0]} nowMinute={nowNext.now_minute} />
+      <UpcomingPreview
+        nextSlice={nextSlice}
+        nowMinute={nowNext.now_minute}
+        targetDate={nowNext.target_date}
+        daySchedule={daySchedule}
+        onConfirmCommitment={onConfirmCommitment}
+        onEditCommitment={onEditCommitment}
+        onDismissCommitment={onDismissCommitment}
+      />
+      {onConfirmCommitment && onEditCommitment && onDismissCommitment && (
+        <TentativeReviewStrip
+          items={stripItems}
+          onConfirm={onConfirmCommitment}
+          onEdit={onEditCommitment}
+          onDismiss={onDismissCommitment}
+        />
+      )}
     </GlassCard>
   );
 };
