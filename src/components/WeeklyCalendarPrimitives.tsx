@@ -116,13 +116,15 @@ const RegularBlockBody: React.FC<{
   rightInset: string;
 }> = ({ block, durationMinutes, rightInset }) => {
   const categoryMeta = resolveCategoryMeta(block.category);
+  const paddingClass = durationMinutes < 90 ? 'py-1' : 'py-1.5';
+  const titleClampClass = durationMinutes < 90 ? 'truncate' : 'line-clamp-2';
   return (
-    <div className="px-2 py-1.5 h-full flex flex-col justify-between gap-1 min-w-0">
+    <div className={`px-2 ${paddingClass} h-full flex flex-col justify-between gap-0.5 min-w-0`}>
       <div className={`space-y-0.5 min-w-0 ${rightInset}`}>
         <div className="text-[10px] font-mono font-semibold text-slate-300 truncate leading-tight">
           {formatMinuteRange(block.start_minute, block.end_minute)}
         </div>
-        <div className="text-xs font-semibold text-slate-100 line-clamp-2 leading-snug break-words">
+        <div className={`text-xs font-semibold text-slate-100 ${titleClampClass} leading-snug break-words`}>
           {block.title}
         </div>
       </div>
@@ -131,7 +133,7 @@ const RegularBlockBody: React.FC<{
           <StatusBadge label={categoryMeta.label} variant={categoryMeta.badgeVariant} size="xs" />
           {!block.active && <StatusBadge label="Paused" variant="idle" size="xs" />}
         </div>
-        {durationMinutes >= 90 && (
+        {durationMinutes >= 120 && (
           <div className="text-[10px] text-slate-400 truncate">{NUDGE_LABELS[block.nudge_mode]}</div>
         )}
       </div>
@@ -170,7 +172,7 @@ const BlockCardBody: React.FC<{
     <RegularBlockBody
       block={block}
       durationMinutes={layout.durationMinutes}
-      rightInset={hasVisibleQuickActions ? 'pr-16' : ''}
+      rightInset={hasVisibleQuickActions ? 'pr-24' : ''}
     />
   );
 };
@@ -208,8 +210,8 @@ const BlockActionControls: React.FC<{
     ? 'opacity-100'
     : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
   const btnSizeClass = isMobile
-    ? 'min-h-[34px] min-w-[34px] justify-center px-1'
-    : 'min-h-[24px] min-w-[24px] justify-center px-1';
+    ? 'min-h-[44px] min-w-[44px] lg:min-h-[26px] lg:min-w-[26px] justify-center px-1'
+    : 'min-h-[26px] min-w-[26px] justify-center px-1';
   const toggleLabel = `${block.active ? 'Pause' : 'Resume'} ${block.title}`;
 
   return (
