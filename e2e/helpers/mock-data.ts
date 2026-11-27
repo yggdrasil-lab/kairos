@@ -11,9 +11,11 @@ import type {
   GridException,
   HabitCue,
   HydratedWorkout,
+  NapRecoveryBlock,
   NowNextState,
   PassiveSignalsResponse,
   ResolvedSlice,
+  SleepPressureNudge,
   WeeklyReflection,
 } from '../../src/domain/types';
 
@@ -23,6 +25,8 @@ export interface MockApiOptions {
   tentativeNext?: boolean;
   activeTentativeNow?: boolean;
   fastingSuggestion?: FastingSuggestion | null;
+  naps?: NapRecoveryBlock[];
+  sleepPressureNudge?: SleepPressureNudge | null;
 }
 
 const DEFAULT_FASTING_SUGGESTION: FastingSuggestion = {
@@ -32,6 +36,25 @@ const DEFAULT_FASTING_SUGGESTION: FastingSuggestion = {
   phase: 'fasting',
   is_optional_reset: false,
   reason: 'Baseline 14:10 window opens at 10:30',
+};
+
+const DEFAULT_NAPS: NapRecoveryBlock[] = [
+  {
+    start_at: '2026-11-25T13:00:00+13:00',
+    end_at: '2026-11-25T14:45:00+13:00',
+    start_minute: 780,
+    end_minute: 885,
+    duration_hours: 1.75,
+  },
+];
+
+const DEFAULT_SLEEP_PRESSURE_NUDGE: SleepPressureNudge = {
+  triggered: true,
+  reason: 'Extended 1.8h nap (ended 14:45) may lower evening sleep pressure.',
+  suggestion: 'Keep 22:00 screens-off calm, avoid forcing early sleep, and dim lights until drowsy.',
+  latest_nap_end: '14:45',
+  total_nap_hours: 1.75,
+  nap_count: 1,
 };
 
 const TARGET_DATE = '2026-11-25';
@@ -159,6 +182,8 @@ interface MockStore {
   pushSubscriptions: string[];
   workoutHydration: DayWorkoutHydration;
   fastingSuggestion: FastingSuggestion | null;
+  naps: NapRecoveryBlock[];
+  sleepPressureNudge: SleepPressureNudge | null;
   nextId: number;
 }
 
@@ -257,6 +282,7 @@ function buildNowNextPayload(store: MockStore): NowNextState {
     is_quiet_hours: false,
     workout_hydration: store.workoutHydration,
     fasting_suggestion: store.fastingSuggestion,
+    sleep_pressure_nudge: store.sleepPressureNudge,
   };
 }
 
@@ -270,6 +296,8 @@ function buildDayPayload(store: MockStore): DaySchedule {
     has_conflicts: slices.some((s) => s.has_conflict),
     workout_hydration: store.workoutHydration,
     fasting_suggestion: store.fastingSuggestion,
+    naps: store.naps,
+    sleep_pressure_nudge: store.sleepPressureNudge,
   };
 }
 
@@ -594,6 +622,14 @@ export async function setupKairosMockApi(
       options.fastingSuggestion === undefined
         ? { ...DEFAULT_FASTING_SUGGESTION }
         : options.fastingSuggestion,
+    naps:
+      options.naps === undefined
+        ? DEFAULT_NAPS.map((n) => ({ ...n }))
+        : options.naps.map((n) => ({ ...n })),
+    sleepPressureNudge:
+      options.sleepPressureNudge === undefined
+        ? { ...DEFAULT_SLEEP_PRESSURE_NUDGE }
+        : options.sleepPressureNudge,
     nextId: 600,
   };
   await page.route('**/api/**', (route) => handleApiRoute(route, store));

@@ -23,6 +23,7 @@ import type {
 } from '../domain/types';
 import { FastingSuggestionPill } from './FastingSuggestionPill';
 import { HydratedWorkoutBadge, KratosDayHeaderPill } from './HydratedWorkoutBadge';
+import { SleepPressurePill } from './SleepPressurePill';
 import {
   TENTATIVE_SURFACE_CLASS,
   TentativeActionButtons,
@@ -324,6 +325,7 @@ function resolveHeroViewModel(
         ? effectiveHydration.planned_workout
         : null,
     fastingSuggestion: nowNext.fasting_suggestion ?? daySchedule?.fasting_suggestion ?? null,
+    sleepPressureNudge: nowNext.sleep_pressure_nudge ?? daySchedule?.sleep_pressure_nudge ?? null,
     activeTentative: active?.kind === 'commitment' && active.tentative,
     nextSlice,
     stripItems: daySchedule
@@ -349,6 +351,7 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
     suppressedTail,
     dayHeaderWorkout,
     fastingSuggestion,
+    sleepPressureNudge,
     activeTentative,
     nextSlice,
     stripItems,
@@ -368,6 +371,7 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
       />
       {dayHeaderWorkout && <KratosDayHeaderPill workout={dayHeaderWorkout} />}
       {fastingSuggestion && <FastingSuggestionPill suggestion={fastingSuggestion} />}
+      {sleepPressureNudge && <SleepPressurePill nudge={sleepPressureNudge} />}
       {active ? (
         <ActiveSliceContent
           slice={active}

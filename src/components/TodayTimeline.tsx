@@ -1,10 +1,12 @@
 import React from 'react';
-import { Calendar, Edit2, EyeOff, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Calendar, Edit2, EyeOff, Moon, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Button, EmptyState, GlassCard, SectionHeader, StatusBadge } from '@yggdrasil-lab/ui';
 import {
+  buildTimelineEntries,
   formatDuration,
   formatHydratedWorkoutDetail,
   formatMinuteRange,
+  formatNapDuration,
   isReadOnlyKratos,
   resolveCategoryMeta,
   SOURCE_META,
@@ -15,10 +17,13 @@ import type {
   DayWorkoutHydration,
   FastingSuggestion,
   GridException,
+  NapRecoveryBlock,
   ResolvedSlice,
+  SleepPressureNudge,
 } from '../domain/types';
 import { FastingSuggestionPill } from './FastingSuggestionPill';
 import { HydratedWorkoutBadge, KratosDayHeaderPill } from './HydratedWorkoutBadge';
+import { SleepPressurePill } from './SleepPressurePill';
 import {
   TENTATIVE_SURFACE_CLASS,
   TentativeActionButtons,
@@ -85,20 +90,36 @@ const AllDayCommitmentsBar: React.FC<{
   commitments: Commitment[];
   workoutHydration?: DayWorkoutHydration | null;
   fastingSuggestion?: FastingSuggestion | null;
+  sleepPressureNudge?: SleepPressureNudge | null;
   onEdit: (item: Commitment) => void;
   onConfirm?: (id: number) => void;
   onDismiss?: (id: number) => void;
   onDelete: (id: number) => void;
-}> = ({ commitments, workoutHydration, fastingSuggestion, onEdit, onConfirm, onDismiss, onDelete }) => {
+}> = ({
+  commitments,
+  workoutHydration,
+  fastingSuggestion,
+  sleepPressureNudge,
+  onEdit,
+  onConfirm,
+  onDismiss,
+  onDelete,
+}) => {
   const dayHeaderWorkout =
     workoutHydration?.planned_workout?.placement === 'day_header'
       ? workoutHydration.planned_workout
       : null;
-  if (commitments.length === 0 && !dayHeaderWorkout && !fastingSuggestion) return null;
+  const hasHeaderItems =
+    commitments.length > 0 ||
+    Boolean(dayHeaderWorkout) ||
+    Boolean(fastingSuggestion) ||
+    Boolean(sleepPressureNudge);
+  if (!hasHeaderItems) return null;
   return (
     <div data-testid="all-day-commitments" className="space-y-2">
       {dayHeaderWorkout && <KratosDayHeaderPill workout={dayHeaderWorkout} />}
       {fastingSuggestion && <FastingSuggestionPill suggestion={fastingSuggestion} />}
+      {sleepPressureNudge && <SleepPressurePill nudge={sleepPressureNudge} />}
       {commitments.length > 0 && (
         <>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">All-Day Commitments</p>
@@ -243,6 +264,28 @@ const SliceRow: React.FC<{
   );
 };
 
+const NapRecoveryRow: React.FC<{ nap: NapRecoveryBlock }> = ({ nap }) => (
+  <div
+    data-testid="nap-recovery-row"
+    className="rounded-xl border border-indigo-400/25 bg-indigo-500/[0.07] p-3.5 flex flex-col gap-1.5 transition-colors"
+  >
+    <div className="flex flex-wrap items-center gap-2">
+      <Moon className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+      <span className="text-xs font-mono font-semibold text-indigo-200">
+        {formatMinuteRange(nap.start_minute, nap.end_minute)}
+      </span>
+      <span className="text-[11px] font-mono text-indigo-200/75">
+        {formatNapDuration(nap.duration_hours)}
+      </span>
+      <StatusBadge label="Eir" variant="info" size="xs" />
+    </div>
+    <h4 className="text-sm font-semibold text-slate-100 break-words">Nap Recovery</h4>
+    <p className="text-xs text-indigo-200/80 break-words">
+      Recorded via Eir sleep telemetry (passive recovery block).
+    </p>
+  </div>
+);
+
 const SkippedExceptionsBar: React.FC<{
   exceptions: GridException[];
   onRestore: (id: number) => void;
@@ -276,11 +319,17 @@ export const TodayTimeline: React.FC<TodayTimelineProps> = ({
 }) => {
   const commitmentById = new Map<number, Commitment>(schedule.timed_commitments.map((c) => [c.id, c]));
   const effectiveHydration = workoutHydration ?? schedule.workout_hydration ?? null;
+  const naps = schedule.naps ?? [];
+  const timelineEntries = buildTimelineEntries(schedule.slices, naps);
+  const subtitle =
+    naps.length > 0
+      ? `${schedule.slices.length} resolved slices, ${naps.length} nap${naps.length === 1 ? '' : 's'} on ${schedule.target_date}`
+      : `${schedule.slices.length} resolved slices on ${schedule.target_date}`;
   return (
     <GlassCard data-testid="today-timeline" className="space-y-4">
       <SectionHeader
         title="Today Timeline"
-        subtitle={`${schedule.slices.length} resolved slices on ${schedule.target_date}`}
+        subtitle={subtitle}
         icon={<Calendar className="w-4 h-4" />}
         variant="brand"
         actions={
@@ -293,12 +342,13 @@ export const TodayTimeline: React.FC<TodayTimelineProps> = ({
         commitments={schedule.all_day_commitments}
         workoutHydration={effectiveHydration}
         fastingSuggestion={schedule.fasting_suggestion}
+        sleepPressureNudge={schedule.sleep_pressure_nudge}
         onEdit={onEditCommitment}
         onConfirm={onConfirmCommitment}
         onDismiss={onDismissCommitment}
         onDelete={onDeleteCommitment}
       />
-      {schedule.slices.length === 0 ? (
+      {timelineEntries.length === 0 ? (
         <EmptyState
           title="No scheduled slices today"
           description="Add a dated commitment or configure a recurring block on the Mon-Sun Weekly Grid."
@@ -306,19 +356,23 @@ export const TodayTimeline: React.FC<TodayTimelineProps> = ({
         />
       ) : (
         <div className="space-y-2.5">
-          {schedule.slices.map((slice) => (
-            <SliceRow
-              key={slice.slice_id}
-              slice={slice}
-              isActive={nowMinute >= slice.start_minute && nowMinute < slice.end_minute}
-              commitment={commitmentById.get(slice.source_id)}
-              onEditCommitment={onEditCommitment}
-              onConfirmCommitment={onConfirmCommitment}
-              onDismissCommitment={onDismissCommitment}
-              onDeleteCommitment={onDeleteCommitment}
-              onSkipGridBlock={onSkipGridBlock}
-            />
-          ))}
+          {timelineEntries.map((entry) =>
+            entry.kind === 'nap' ? (
+              <NapRecoveryRow key={entry.key} nap={entry.nap} />
+            ) : (
+              <SliceRow
+                key={entry.slice.slice_id}
+                slice={entry.slice}
+                isActive={nowMinute >= entry.slice.start_minute && nowMinute < entry.slice.end_minute}
+                commitment={commitmentById.get(entry.slice.source_id)}
+                onEditCommitment={onEditCommitment}
+                onConfirmCommitment={onConfirmCommitment}
+                onDismissCommitment={onDismissCommitment}
+                onDeleteCommitment={onDeleteCommitment}
+                onSkipGridBlock={onSkipGridBlock}
+              />
+            )
+          )}
         </div>
       )}
       <SkippedExceptionsBar exceptions={exceptions} onRestore={onRestoreException} />

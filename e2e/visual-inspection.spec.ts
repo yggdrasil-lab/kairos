@@ -81,6 +81,13 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(nowFastingPill).toContainText('14:10 · 10:30 - 20:30');
       await expect(nowFastingPill).toContainText('Opens 10:30');
       await expect(nowFastingPill.locator('button')).toHaveCount(0);
+      const nowSleepPill = page.getByTestId('now-next-hero').getByTestId('sleep-pressure-pill');
+      await expect(nowSleepPill).toBeVisible();
+      await expect(nowSleepPill).toContainText('Sleep Pressure');
+      await expect(nowSleepPill).toContainText('1h 45m nap recovery');
+      await expect(nowSleepPill).toContainText('Ended 14:45');
+      await expect(nowSleepPill).toContainText('Extended 1.8h nap (ended 14:45) may lower evening sleep pressure.');
+      await expect(nowSleepPill.locator('button')).toHaveCount(0);
       await expect(page.getByTestId('now-next-upcoming')).toContainText('Design Review Sync');
       await expect(page.getByTestId('active-zone-chain-card')).toBeVisible();
       await expect(page.getByTestId('active-zone-chain-card')).toContainText('Kitchen -> Desk');
@@ -139,6 +146,30 @@ for (const { name: platform, options } of PLATFORMS) {
       await expect(todayFastingPill).toContainText('14:10 · 10:30 - 20:30');
       await expect(todayFastingPill).toContainText('Opens 10:30');
       await expect(todayFastingPill.locator('button')).toHaveCount(0);
+      const todaySleepPill = page.getByTestId('all-day-commitments').getByTestId('sleep-pressure-pill');
+      await expect(todaySleepPill).toBeVisible();
+      await expect(todaySleepPill).toContainText('Sleep Pressure');
+      await expect(todaySleepPill).toContainText('Ended 14:45');
+      await expect(todaySleepPill.locator('button')).toHaveCount(0);
+
+      const napRow = page.getByTestId('today-timeline').getByTestId('nap-recovery-row');
+      await expect(napRow).toBeVisible();
+      await expect(napRow).toContainText('13:00 - 14:45');
+      await expect(napRow).toContainText('1h 45m');
+      await expect(napRow).toContainText('Eir');
+      await expect(napRow).toContainText('Nap Recovery');
+      await expect(napRow.locator('button')).toHaveCount(0);
+      await expect(napRow).not.toContainText('Conflict');
+
+      const archBox = await page.getByTestId('timeline-slice-commitment-104').boundingBox();
+      const napBox = await napRow.boundingBox();
+      const dentistBox = await page.getByTestId('timeline-slice-commitment-106').boundingBox();
+      expect(archBox).not.toBeNull();
+      expect(napBox).not.toBeNull();
+      expect(dentistBox).not.toBeNull();
+      expect(napBox!.y).toBeGreaterThan(archBox!.y);
+      expect(dentistBox!.y).toBeGreaterThan(napBox!.y);
+
       await expect(page.getByTestId('all-day-item-105')).toContainText('Flight NZ502 to Wellington');
       await expect(page.getByTestId('all-day-item-105')).toContainText('Tentative');
       await expect(page.getByTestId('timeline-slice-commitment-106')).toContainText('Dentist Checkup');
