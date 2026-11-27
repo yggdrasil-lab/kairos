@@ -5,9 +5,14 @@ import type {
   DaySchedule,
   GridBlock,
   HydratedWorkout,
+  NapRecoveryBlock,
   NudgeMode,
   ResolvedSlice,
 } from './types';
+
+export type TimelineEntry =
+  | { kind: 'slice'; slice: ResolvedSlice }
+  | { kind: 'nap'; nap: NapRecoveryBlock; key: string };
 
 export interface WeekdayOption {
   dayOfWeek: number;
@@ -166,6 +171,34 @@ export function formatDuration(minutes: number): string {
     return `${hrs}h`;
   }
   return `${mins}m`;
+}
+
+export function formatNapDuration(hours: number): string {
+  return formatDuration(Math.max(0, Math.round(hours * 60)));
+}
+
+function getTimelineEntryBounds(entry: TimelineEntry): { start: number; end: number } {
+  if (entry.kind === 'nap') {
+    return { start: entry.nap.start_minute, end: entry.nap.end_minute };
+  }
+  return { start: entry.slice.start_minute, end: entry.slice.end_minute };
+}
+
+export function buildTimelineEntries(
+  slices: ResolvedSlice[],
+  naps: NapRecoveryBlock[]
+): TimelineEntry[] {
+  const sliceEntries: TimelineEntry[] = slices.map((slice) => ({ kind: 'slice', slice }));
+  const napEntries: TimelineEntry[] = naps.map((nap, index) => ({
+    kind: 'nap',
+    nap,
+    key: `nap-${nap.start_minute}-${nap.end_minute}-${index}`,
+  }));
+  return [...sliceEntries, ...napEntries].sort((a, b) => {
+    const boundsA = getTimelineEntryBounds(a);
+    const boundsB = getTimelineEntryBounds(b);
+    return boundsA.start - boundsB.start || boundsA.end - boundsB.end;
+  });
 }
 
 export function parseTimeToMinute(value: string): number | null {

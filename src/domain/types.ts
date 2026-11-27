@@ -173,6 +173,25 @@ export interface DaySchedule {
   has_conflicts: boolean;
   workout_hydration?: DayWorkoutHydration | null;
   fasting_suggestion?: FastingSuggestion | null;
+  naps?: NapRecoveryBlock[];
+  sleep_pressure_nudge?: SleepPressureNudge | null;
+}
+
+export interface NapRecoveryBlock {
+  start_at: string;
+  end_at: string;
+  start_minute: number;
+  end_minute: number;
+  duration_hours: number;
+}
+
+export interface SleepPressureNudge {
+  triggered: boolean;
+  reason: string;
+  suggestion: string;
+  latest_nap_end: string;
+  total_nap_hours: number;
+  nap_count: number;
 }
 
 export type FastingProtocol = '14:10' | '18:6';
@@ -198,6 +217,7 @@ export interface NowNextState {
   is_quiet_hours: boolean;
   workout_hydration?: DayWorkoutHydration | null;
   fasting_suggestion?: FastingSuggestion | null;
+  sleep_pressure_nudge?: SleepPressureNudge | null;
 }
 
 export interface KairosCockpitData {
