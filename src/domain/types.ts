@@ -172,6 +172,20 @@ export interface DaySchedule {
   timed_commitments: Commitment[];
   has_conflicts: boolean;
   workout_hydration?: DayWorkoutHydration | null;
+  fasting_suggestion?: FastingSuggestion | null;
+}
+
+export type FastingProtocol = '14:10' | '18:6';
+
+export type FastingPhase = 'fasting' | 'eating' | 'closed';
+
+export interface FastingSuggestion {
+  protocol: FastingProtocol;
+  window_start: string;
+  window_end: string;
+  phase: FastingPhase;
+  is_optional_reset: boolean;
+  reason: string;
 }
 
 export interface NowNextState {
@@ -183,6 +197,7 @@ export interface NowNextState {
   open_time_minutes: number | null;
   is_quiet_hours: boolean;
   workout_hydration?: DayWorkoutHydration | null;
+  fasting_suggestion?: FastingSuggestion | null;
 }
 
 export interface KairosCockpitData {

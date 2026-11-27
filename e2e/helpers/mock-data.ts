@@ -4,6 +4,7 @@ import type {
   CompletedKratosSession,
   DaySchedule,
   DayWorkoutHydration,
+  FastingSuggestion,
   FrictionNote,
   FrictionTag,
   GridBlock,
@@ -21,7 +22,17 @@ export interface MockApiOptions {
   activeWorkoutNow?: boolean;
   tentativeNext?: boolean;
   activeTentativeNow?: boolean;
+  fastingSuggestion?: FastingSuggestion | null;
 }
+
+const DEFAULT_FASTING_SUGGESTION: FastingSuggestion = {
+  protocol: '14:10',
+  window_start: '10:30',
+  window_end: '20:30',
+  phase: 'fasting',
+  is_optional_reset: false,
+  reason: 'Baseline 14:10 window opens at 10:30',
+};
 
 const TARGET_DATE = '2026-11-25';
 const NOW_MINUTE = 570; // 09:30
@@ -147,6 +158,7 @@ interface MockStore {
   frictionNotes: FrictionNote[];
   pushSubscriptions: string[];
   workoutHydration: DayWorkoutHydration;
+  fastingSuggestion: FastingSuggestion | null;
   nextId: number;
 }
 
@@ -244,6 +256,7 @@ function buildNowNextPayload(store: MockStore): NowNextState {
     open_time_minutes: openTime,
     is_quiet_hours: false,
     workout_hydration: store.workoutHydration,
+    fasting_suggestion: store.fastingSuggestion,
   };
 }
 
@@ -256,6 +269,7 @@ function buildDayPayload(store: MockStore): DaySchedule {
     timed_commitments: store.commitments.filter((c) => !c.all_day),
     has_conflicts: slices.some((s) => s.has_conflict),
     workout_hydration: store.workoutHydration,
+    fasting_suggestion: store.fastingSuggestion,
   };
 }
 
@@ -576,6 +590,10 @@ export async function setupKairosMockApi(
       completed_sessions: COMPLETED_KRATOS_SESSIONS.map((s) => ({ ...s })),
       peer_degraded: false,
     },
+    fastingSuggestion:
+      options.fastingSuggestion === undefined
+        ? { ...DEFAULT_FASTING_SUGGESTION }
+        : options.fastingSuggestion,
     nextId: 600,
   };
   await page.route('**/api/**', (route) => handleApiRoute(route, store));

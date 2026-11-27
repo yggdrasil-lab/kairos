@@ -13,9 +13,11 @@ import type {
   Commitment,
   DaySchedule,
   DayWorkoutHydration,
+  FastingSuggestion,
   GridException,
   ResolvedSlice,
 } from '../domain/types';
+import { FastingSuggestionPill } from './FastingSuggestionPill';
 import { HydratedWorkoutBadge, KratosDayHeaderPill } from './HydratedWorkoutBadge';
 import {
   TENTATIVE_SURFACE_CLASS,
@@ -82,19 +84,21 @@ const AllDayCommitmentCard: React.FC<{
 const AllDayCommitmentsBar: React.FC<{
   commitments: Commitment[];
   workoutHydration?: DayWorkoutHydration | null;
+  fastingSuggestion?: FastingSuggestion | null;
   onEdit: (item: Commitment) => void;
   onConfirm?: (id: number) => void;
   onDismiss?: (id: number) => void;
   onDelete: (id: number) => void;
-}> = ({ commitments, workoutHydration, onEdit, onConfirm, onDismiss, onDelete }) => {
+}> = ({ commitments, workoutHydration, fastingSuggestion, onEdit, onConfirm, onDismiss, onDelete }) => {
   const dayHeaderWorkout =
     workoutHydration?.planned_workout?.placement === 'day_header'
       ? workoutHydration.planned_workout
       : null;
-  if (commitments.length === 0 && !dayHeaderWorkout) return null;
+  if (commitments.length === 0 && !dayHeaderWorkout && !fastingSuggestion) return null;
   return (
     <div data-testid="all-day-commitments" className="space-y-2">
       {dayHeaderWorkout && <KratosDayHeaderPill workout={dayHeaderWorkout} />}
+      {fastingSuggestion && <FastingSuggestionPill suggestion={fastingSuggestion} />}
       {commitments.length > 0 && (
         <>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">All-Day Commitments</p>
@@ -288,6 +292,7 @@ export const TodayTimeline: React.FC<TodayTimelineProps> = ({
       <AllDayCommitmentsBar
         commitments={schedule.all_day_commitments}
         workoutHydration={effectiveHydration}
+        fastingSuggestion={schedule.fasting_suggestion}
         onEdit={onEditCommitment}
         onConfirm={onConfirmCommitment}
         onDismiss={onDismissCommitment}
