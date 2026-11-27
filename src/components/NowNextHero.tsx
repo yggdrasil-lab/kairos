@@ -21,6 +21,7 @@ import type {
   NowNextState,
   ResolvedSlice,
 } from '../domain/types';
+import { FastingSuggestionPill } from './FastingSuggestionPill';
 import { HydratedWorkoutBadge, KratosDayHeaderPill } from './HydratedWorkoutBadge';
 import {
   TENTATIVE_SURFACE_CLASS,
@@ -304,6 +305,33 @@ const UpcomingPreview: React.FC<{
   );
 };
 
+function resolveHeroViewModel(
+  nowNext: NowNextState,
+  daySchedule?: DaySchedule,
+  workoutHydration?: DayWorkoutHydration | null
+) {
+  const active = nowNext.active_slice;
+  const effectiveHydration = workoutHydration ?? nowNext.workout_hydration ?? null;
+  const nextSlice = nowNext.upcoming[0];
+  const activeId = active?.kind === 'commitment' ? active.source_id : null;
+  const nextId = nextSlice?.kind === 'commitment' && nextSlice.tentative ? nextSlice.source_id : null;
+  return {
+    active,
+    hasConflict: Boolean(active?.has_conflict) || nowNext.active_items.length > 1,
+    suppressedTail: Boolean(active?.suppressed_tail),
+    dayHeaderWorkout:
+      effectiveHydration?.planned_workout?.placement === 'day_header'
+        ? effectiveHydration.planned_workout
+        : null,
+    fastingSuggestion: nowNext.fasting_suggestion ?? daySchedule?.fasting_suggestion ?? null,
+    activeTentative: active?.kind === 'commitment' && active.tentative,
+    nextSlice,
+    stripItems: daySchedule
+      ? getTentativeCommitments(daySchedule).filter((item) => item.id !== activeId && item.id !== nextId)
+      : [],
+  };
+}
+
 export const NowNextHero: React.FC<NowNextHeroProps> = ({
   nowNext,
   daySchedule,
@@ -315,23 +343,16 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
   onDismissCommitment,
   isExtending = false,
 }) => {
-  const active = nowNext.active_slice;
-  const hasConflict = Boolean(active?.has_conflict) || nowNext.active_items.length > 1;
-  const suppressedTail = Boolean(active?.suppressed_tail);
-  const effectiveHydration = workoutHydration ?? nowNext.workout_hydration ?? null;
-  const dayHeaderWorkout =
-    effectiveHydration?.planned_workout?.placement === 'day_header'
-      ? effectiveHydration.planned_workout
-      : null;
-  const activeTentative = active?.kind === 'commitment' && active.tentative;
-  const nextSlice = nowNext.upcoming[0];
-  const activeCommitmentId = active?.kind === 'commitment' ? active.source_id : null;
-  const nextCommitmentId = nextSlice?.kind === 'commitment' && nextSlice.tentative ? nextSlice.source_id : null;
-  const stripItems = daySchedule
-    ? getTentativeCommitments(daySchedule).filter(
-        (item) => item.id !== activeCommitmentId && item.id !== nextCommitmentId
-      )
-    : [];
+  const {
+    active,
+    hasConflict,
+    suppressedTail,
+    dayHeaderWorkout,
+    fastingSuggestion,
+    activeTentative,
+    nextSlice,
+    stripItems,
+  } = resolveHeroViewModel(nowNext, daySchedule, workoutHydration);
 
   return (
     <GlassCard
@@ -346,6 +367,7 @@ export const NowNextHero: React.FC<NowNextHeroProps> = ({
         targetDate={nowNext.target_date}
       />
       {dayHeaderWorkout && <KratosDayHeaderPill workout={dayHeaderWorkout} />}
+      {fastingSuggestion && <FastingSuggestionPill suggestion={fastingSuggestion} />}
       {active ? (
         <ActiveSliceContent
           slice={active}

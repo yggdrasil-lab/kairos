@@ -75,6 +75,12 @@ for (const { name: platform, options } of PLATFORMS) {
 
       await expect(page.getByTestId('now-next-hero')).toContainText('Wednesday Deep Work');
       await expect(page.getByTestId('now-next-hero')).toContainText('<15m Tail Suppressed');
+      const nowFastingPill = page.getByTestId('now-next-hero').getByTestId('fasting-suggestion-pill');
+      await expect(nowFastingPill).toBeVisible();
+      await expect(nowFastingPill).toContainText('Fasting');
+      await expect(nowFastingPill).toContainText('14:10 · 10:30 - 20:30');
+      await expect(nowFastingPill).toContainText('Opens 10:30');
+      await expect(nowFastingPill.locator('button')).toHaveCount(0);
       await expect(page.getByTestId('now-next-upcoming')).toContainText('Design Review Sync');
       await expect(page.getByTestId('active-zone-chain-card')).toBeVisible();
       await expect(page.getByTestId('active-zone-chain-card')).toContainText('Kitchen -> Desk');
@@ -127,6 +133,12 @@ for (const { name: platform, options } of PLATFORMS) {
       }).toBe(true);
 
       await expect(page.getByTestId('all-day-commitments')).toContainText('Release Freeze Window');
+      const todayFastingPill = page.getByTestId('all-day-commitments').getByTestId('fasting-suggestion-pill');
+      await expect(todayFastingPill).toBeVisible();
+      await expect(todayFastingPill).toContainText('Fasting');
+      await expect(todayFastingPill).toContainText('14:10 · 10:30 - 20:30');
+      await expect(todayFastingPill).toContainText('Opens 10:30');
+      await expect(todayFastingPill.locator('button')).toHaveCount(0);
       await expect(page.getByTestId('all-day-item-105')).toContainText('Flight NZ502 to Wellington');
       await expect(page.getByTestId('all-day-item-105')).toContainText('Tentative');
       await expect(page.getByTestId('timeline-slice-commitment-106')).toContainText('Dentist Checkup');
@@ -373,6 +385,74 @@ for (const { name: platform, options } of PLATFORMS) {
       await page.getByTestId('timeline-tentative-dismiss-105').click();
       await dismissAllDayPromise;
       await expect(page.getByTestId('all-day-item-105')).toHaveCount(0);
+    });
+
+    test(`verifies optional Friday 18:6 fasting pill and phase variants on ${platform}`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date('2026-11-27T09:30:00+13:00'));
+      await setupKairosMockApi(page, {
+        fastingSuggestion: {
+          protocol: '18:6',
+          window_start: '14:30',
+          window_end: '20:30',
+          phase: 'fasting',
+          is_optional_reset: true,
+          reason: 'Optional Friday 18:6 reset window on rest day with green vitals',
+        },
+      });
+      await page.goto('/?tab=now');
+
+      const nowPill = page.getByTestId('now-next-hero').getByTestId('fasting-suggestion-pill');
+      await expect(nowPill).toBeVisible();
+      await expect(nowPill).toContainText('Fasting');
+      await expect(nowPill).toContainText('Optional 18:6 · 14:30 - 20:30');
+      await expect(nowPill).toContainText('Opens 14:30');
+      await expect(nowPill.locator('button')).toHaveCount(0);
+
+      if (platform !== 'desktop') {
+        const hasHorizontalOverflow = await page.evaluate(
+          () => document.documentElement.scrollWidth > window.innerWidth + 1
+        );
+        expect(hasHorizontalOverflow).toBe(false);
+        await page.getByRole('button', { name: 'Today' }).click();
+      }
+      const todayPill = page.getByTestId('all-day-commitments').getByTestId('fasting-suggestion-pill');
+      await expect(todayPill).toBeVisible();
+      await expect(todayPill).toContainText('Optional 18:6 · 14:30 - 20:30');
+      await expect(todayPill.locator('button')).toHaveCount(0);
+
+      await page.unroute('**/api/**');
+      await setupKairosMockApi(page, {
+        fastingSuggestion: {
+          protocol: '14:10',
+          window_start: '10:30',
+          window_end: '20:30',
+          phase: 'eating',
+          is_optional_reset: false,
+          reason: 'Inside 14:10 eating window',
+        },
+      });
+      await page.goto('/?tab=now');
+      const eatingPill = page.getByTestId('now-next-hero').getByTestId('fasting-suggestion-pill');
+      await expect(eatingPill).toContainText('Eating');
+      await expect(eatingPill).toContainText('14:10 · 10:30 - 20:30');
+      await expect(eatingPill).toContainText('Closes 20:30');
+
+      await page.unroute('**/api/**');
+      await setupKairosMockApi(page, {
+        fastingSuggestion: {
+          protocol: '14:10',
+          window_start: '10:30',
+          window_end: '20:30',
+          phase: 'closed',
+          is_optional_reset: false,
+          reason: 'Kitchen closed after 20:30',
+        },
+      });
+      await page.goto('/?tab=now');
+      const closedPill = page.getByTestId('now-next-hero').getByTestId('fasting-suggestion-pill');
+      await expect(closedPill).toContainText('Closed');
+      await expect(closedPill).toContainText('14:10 · 10:30 - 20:30');
+      await expect(closedPill).toContainText('Kitchen closed');
     });
   });
 }
